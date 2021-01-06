@@ -21,5 +21,7 @@ Protein = R6::R6Class(
     )
   ),
 
-  public = list()
+  public = list(
+
+  )
 )

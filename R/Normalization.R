@@ -3,17 +3,18 @@
 #'
 #' @export
 #'
-Filtering = R6::R6Class(
-  "Filtering",
+Normalization = R6::R6Class(
+  "Normalization",
   inherit = Magellan::Process,
   private = list(
-    .config = list(name = 'Filtering',
+    .config = list(name = 'Normalization',
                    steps = c('Description', 'Step1', 'Step2', 'Step3'),
                    mandatory = c(T,F,T,F)
     )
   ),
 
   public = list(
+
     Global_server = function(input, output){},
 
     Description_server = function(input, output){
@@ -32,6 +33,7 @@ Filtering = R6::R6Class(
 
 
     Description_ui = function(){
+
       wellPanel(
         tagList(
           includeMarkdown( system.file("app/md", paste0(self$config$name, ".md"), package="Magellan")),
@@ -110,7 +112,7 @@ Filtering = R6::R6Class(
     Step3_server = function(input, output){
 
       observeEvent(input$btn_validate_Step3, ignoreInit = T, {
-        self$rv$dataIn <- AddItemToDataset(self$rv$dataIn, self$config$name)
+        self$rv$dataIn <- Add_Item_to_Dataset(self$rv$dataIn, self$config$name)
         self$ValidateCurrentPos()
       })
     },

@@ -112,7 +112,7 @@ Imputation = R6::R6Class(
     Step3_server = function(input, output){
 
       observeEvent(input$btn_validate_Step3, ignoreInit = T, {
-        self$rv$dataIn <- AddItemToDataset(self$rv$dataIn, self$config$name)
+        self$rv$dataIn <- Add_Item_to_Dataset(self$rv$dataIn, self$config$name)
         self$ValidateCurrentPos()
       })
     },
