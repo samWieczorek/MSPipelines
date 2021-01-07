@@ -3,8 +3,8 @@
 #'
 #' @export
 #'
-Filtering = R6::R6Class(
-  "Filtering",
+Protein-Filtering = R6::R6Class(
+  "Protein-Filtering",
   inherit = Magellan::Process,
   private = list(
     .config = list(name = 'Filtering',

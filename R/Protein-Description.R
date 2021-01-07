@@ -3,8 +3,8 @@
 #'
 #' @export
 #'
-Description = R6::R6Class(
-  "Description",
+Protein-Description = R6::R6Class(
+  "Protein-Description",
   inherit = Magellan::Process,
   private = list(
     .config = list(name = 'Description',

@@ -3,11 +3,11 @@
 #'
 #' @export
 #'
-HypothesisTest = R6::R6Class(
-  "HypothesisTest",
+Protein-Imputation = R6::R6Class(
+  "Protein-Imputation",
   inherit = Magellan::Process,
   private = list(
-    .config = list(name = 'HypothesisTest',
+    .config = list(name = 'Imputation',
                    steps = c('Description', 'Step1', 'Step2', 'Step3'),
                    mandatory = c(T,F,T,F)
     )

@@ -3,11 +3,11 @@
 #'
 #' @export
 #'
-Normalization = R6::R6Class(
-  "Normalization",
+Protein-HypothesisTest = R6::R6Class(
+  "Protein-HypothesisTest",
   inherit = Magellan::Process,
   private = list(
-    .config = list(name = 'Normalization',
+    .config = list(name = 'HypothesisTest',
                    steps = c('Description', 'Step1', 'Step2', 'Step3'),
                    mandatory = c(T,F,T,F)
     )
