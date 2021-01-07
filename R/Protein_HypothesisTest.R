@@ -1,13 +1,14 @@
 #' @importFrom R6 R6Class
 #' @importFrom Magellan Process
+#' @import shiny
 #'
 #' @export
 #'
-Protein-Normalization = R6::R6Class(
-  "Protein-Normalization",
+Protein_HypothesisTest = R6::R6Class(
+  "Protein_HypothesisTest",
   inherit = Magellan::Process,
   private = list(
-    .config = list(name = 'Normalization',
+    .config = list(name = 'HypothesisTest',
                    steps = c('Description', 'Step1', 'Step2', 'Step3'),
                    mandatory = c(T,F,T,F)
     )

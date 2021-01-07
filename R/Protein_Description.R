@@ -1,10 +1,11 @@
 #' @importFrom R6 R6Class
 #' @importFrom Magellan Process
+#' @import shiny
 #'
 #' @export
 #'
-Protein-Description = R6::R6Class(
-  "Protein-Description",
+Protein_Description = R6::R6Class(
+  "Protein_Description",
   inherit = Magellan::Process,
   private = list(
     .config = list(name = 'Description',

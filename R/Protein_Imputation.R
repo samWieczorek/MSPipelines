@@ -1,10 +1,11 @@
 #' @importFrom R6 R6Class
 #' @importFrom Magellan Process
+#' @import shiny
 #'
 #' @export
 #'
-Protein-Imputation = R6::R6Class(
-  "Protein-Imputation",
+Protein_Imputation = R6::R6Class(
+  "Protein_Imputation",
   inherit = Magellan::Process,
   private = list(
     .config = list(name = 'Imputation',

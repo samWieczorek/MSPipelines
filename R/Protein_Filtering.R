@@ -4,24 +4,26 @@
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
-#' @noRd 
+#' @noRd
 #'
-#' @importFrom shiny NS tagList
+#' @importFrom R6 R6Class
+#' @importFrom Magellan Process
+#' @import shiny
 #' @import shinyjs
 #' @importFrom shinyalert useShinyalert
-#' 
-Filtering = R6Class(
-  "Filtering",
-  inherit = Process,
+#'
+Protein_Filtering = R6::R6Class(
+  "Protein_Filtering",
+  inherit = Magellan::Process,
   private = list(
     .config = list(name = 'Filtering',
                    steps = c('Description', "MV_Filtering", "Field_Filtering", "Validate"),
                    mandatory = c(T,F,F,F)
     )
   ),
-  
+
   public = list(
-    
+
     ## reactive values for variables in the module
     rv.filter = reactiveValues(
       name = "processProtFilter",
@@ -30,64 +32,65 @@ Filtering = R6Class(
       i = NULL,
       settings = NULL,
       tmp = NULL,
-      
+
       deleted.mvLines = NULL,
       widgets = list(ChooseFilters = "None",
                      seuilNA = 0,
-                     DT_naFilterSummary = data.frame(Filter=NULL, 
+                     DT_naFilterSummary = data.frame(Filter=NULL,
                                                      seuilNA=NULL,
-                                                     nbDeleted=NULL, 
-                                                     Total=NULL, 
+                                                     nbDeleted=NULL,
+                                                     Total=NULL,
                                                      stringsAsFactors=F),
-                     DT_fieldFilterSummary = data.frame(Filter=NULL, 
+                     DT_fieldFilterSummary = data.frame(Filter=NULL,
                                                         Condition=NULL,
-                                                        nbDeleted=NULL, 
-                                                        Total=NULL, 
+                                                        nbDeleted=NULL,
+                                                        Total=NULL,
                                                         stringsAsFactors=F)
       )
     ),
-    
-    
-    
+
+
+
     #global variables for the module
     gFiltersList = c("None" = "None",
                       "Empty lines" = "EmptyLines",
                       "Whole matrix" = "WholeMatrix",
                       "For every condition" = "AllCond",
                       "At least one condition" = "AtLeastOneCond"),
- 
-    
+
+
     Global_server = function(input, output){
       cat(paste0(class(self)[1], "::Global_server() from - ", self$id, '\n'))
-      
-     
+
+
       self$rv.filter$settings <- mod_settings_server("settings", obj=reactive({self$rv$dataIn}))
-      
+
       mod_plots_group_mv_server("MVPlots_filtering",
                                 obj = reactive({self$rv$dataIn[[length(self$rv$dataIn)]]}),
                                 conds = reactive({colData(self$rv$dataIn)}),
                                 base_palette = reactive({self$rv.filter$settings()$basePalette})
       )
-      
-      mod_popover_for_help_server("modulePopover_keepVal", 
+
+      mod_popover_for_help_server("modulePopover_keepVal",
                                   data = list(title=tags$b("Keep vals"),
                                               content= "The user-defined threshold allows to tune the minimum amount of non-NA values for each line to be kept in the dataset (the line is filtered out otherwise). The threshold either applies on the whole dataset, on each condition or on at least one condition."))
 
     },
-    
-    
-    #---------------------------------------------------------------------------    
+
+
+    Description_ui = function(){},
+    #---------------------------------------------------------------------------
     Description_server = function(input, output){
-      
-      
+
+
       #-------------------------------------------------------------------------------------
       output$Description <- renderUI({
-        
-        
+
+
         wellPanel(
           tagList(
-            
-            actionButton(self$ns('btn_validate_Description'), 
+
+            actionButton(self$ns('btn_validate_Description'),
                          paste0('Start ', self$config$name),
                          class = btn_success_color),
             includeMarkdown(paste0('./md/',self$config$name, ".md")),
@@ -95,14 +98,14 @@ Filtering = R6Class(
           )
         )
       })
-      
+
       observeEvent(input$btn_validate_Description, ignoreInit = T, ignoreNULL=T, {
         cat(paste0(class(self)[1], "::observeEvent(input$btn_validate_Description from - ", self$id, '\n'))
         private$InitializeDataIn()
         self$rv.filter$i <- length(self$rv$dataIn)
         self$ValidateCurrentPos()
       })
-      
+
       output$datasetDescription <- renderUI({
         tagList(
           p(self$test$toto),
@@ -110,21 +113,22 @@ Filtering = R6Class(
         )
       })
     },
-    
 
+
+    MV_Filtering_ui = function(){},
 
   #---------------------------------------------------------------------------
     MV_Filtering_server = function(input, output){
-      
-      
+
+
       output$MV_Filtering <- renderUI({
         tagList(
           div(
             id = "screen1Filtering",
             # tags$div(
             div(style="display:inline-block; vertical-align: middle; padding-right: 40px;",
-                selectInput(self$ns("ChooseFilters"),"Type",  
-                            choices = self$gFiltersList, 
+                selectInput(self$ns("ChooseFilters"),"Type",
+                            choices = self$gFiltersList,
                             selected = self$rv.filter$widgets$ChooseFilters,
                             width='200px')
             ),
@@ -147,7 +151,7 @@ Filtering = R6Class(
             mod_plots_group_mv_ui(self$ns("MVPlots_filtering")),
             uiOutput(self$ns("ObserverMVFilteringDone"))
           )
-          
+
         )
       })
       ##
@@ -156,58 +160,58 @@ Filtering = R6Class(
         self$rv.filter$widgets$ChooseFilters
         self$rv.filter$widgets$seuilNA
         self$rv$dataIn
-        
-        
+
+
         isolate({
           if (self$rv.filter$widgets$ChooseFilters == self$gFiltersList[["None"]]){
             #self$rv$dataIn <- rv$dataset[[input$datasets]]
           } else {
-            
+
             # create a duplicate of the last assay
             #browser()
-            self$rv$dataIn <- DAPAR2::MVrowsTagToOne(object = self$rv$dataIn, 
-                                                       type = self$rv.filter$widgets$ChooseFilters, 
-                                                       th = as.integer(self$rv.filter$widgets$seuilNA), 
+            self$rv$dataIn <- DAPAR2::MVrowsTagToOne(object = self$rv$dataIn,
+                                                       type = self$rv.filter$widgets$ChooseFilters,
+                                                       th = as.integer(self$rv.filter$widgets$seuilNA),
                                                        percent = FALSE)
-            
+
             ## keep rows where tagNA==0
             na_filter <- QFeatures::VariableFilter(field = "tagNA", value = "0", condition = "==")
-            
-            self$rv$dataIn <- DAPAR2::filterFeaturesSam(object = self$rv$dataIn, 
-                                                          i = self$rv.filter$i, 
-                                                          name = paste0('na_filter_',self$rv.filter$i), 
+
+            self$rv$dataIn <- DAPAR2::filterFeaturesSam(object = self$rv$dataIn,
+                                                          i = self$rv.filter$i,
+                                                          name = paste0('na_filter_',self$rv.filter$i),
                                                           filter=na_filter)
             self$rv.filter$i <- self$rv.filter$i +1
             self$rv$dataIn <- DAPAR2::removeAdditionalCol(self$rv$dataIn, "tagNA")
             key <- MultiAssayExperiment::metadata(self$rv$dataIn)$keyId
-            
+
             # self$rv$dataIn <- addAssayLink(self$rv$dataIn, from = from, to = to, varFrom = key, varTo = key)
-            
+
             ## keep track of deleted rows
-            self$rv.filter$deleted.mvLines <- setdiff(SummarizedExperiment::rowData(self$rv$dataIn[[self$rv.filter$i - 1]])[,MultiAssayExperiment::metadata(self$rv$dataIn)$keyId], 
+            self$rv.filter$deleted.mvLines <- setdiff(SummarizedExperiment::rowData(self$rv$dataIn[[self$rv.filter$i - 1]])[,MultiAssayExperiment::metadata(self$rv$dataIn)$keyId],
                                                  SummarizedExperiment::rowData(self$rv$dataIn[[self$rv.filter$i]])[,MultiAssayExperiment::metadata(self$rv$dataIn)$keyId])
-            
+
             #browser()
             # ind <- grep('_filtered_', names(self$rv$dataIn))
             # if (length(ind) >= 2)
             #   metadata(self$rv$dataIn[[i]])$Params <- metadata(self$rv$dataIn[[ind[length(ind)-1]]])$Params
-            # 
+            #
             if (self$rv.filter$widgets$ChooseFilters == 'EmptyLines')
               txt <- paste0('type=',self$rv.filter$widgets$ChooseFilters,
                             ' percent=', self$rv.filter$widgets$percent)
-            else 
+            else
               txt <- paste0('type=',self$rv.filter$widgets$ChooseFilters,
-                            ' th=',self$rv.filter$widgets$seuilNA, 
+                            ' th=',self$rv.filter$widgets$seuilNA,
                             ' percent=', self$rv.filter$widgets$percent)
-            
+
             MultiAssayExperiment::metadata(self$rv$dataIn[[self$rv.filter$i]])$Params[[paste0('na_filter_',self$rv.filter$i)]] <- txt
-            
+
             .total <- ifelse(self$rv.filter$i > 0, nrow(self$rv$dataIn[[self$rv.filter$i]]), 0)
-            df <- data.frame(Filter = self$rv.filter$widgets$ChooseFilters, 
-                             seuilNA = as.integer(self$rv.filter$widgets$seuilNA), 
-                             nbDeleted = length(self$rv.filter$deleted.mvLines), 
+            df <- data.frame(Filter = self$rv.filter$widgets$ChooseFilters,
+                             seuilNA = as.integer(self$rv.filter$widgets$seuilNA),
+                             nbDeleted = length(self$rv.filter$deleted.mvLines),
                              Total = .total)
-            
+
             self$rv.filter$widgets$DT_naFilterSummary <- rbind(self$rv.filter$widgets$DT_naFilterSummary, df)
 
             # }
@@ -225,78 +229,78 @@ Filtering = R6Class(
           self$rv.filter$widgets$DT_naFilterSummary <- self$rv.filter$widgets$DT_naFilterSummary[-nrow(self$rv.filter$widgets$DT_naFilterSummary),]
         }
       })
-      
-      
+
+
       output$seuilNADelete <- renderUI({
         req(self$rv.filter$widgets$ChooseFilters)
-        
+
         if ((self$rv.filter$widgets$ChooseFilters=="None") || (self$rv.filter$widgets$ChooseFilters==self$gFiltersList[["Empty lines"]])) {return(NULL)   }
         print(self$rv$dataIn)
         print(self$rv.filter$i)
         print(self$rv.filter$widgets$ChooseFilters)
        # browser()
-        choice <- getListNbValuesInLines(obj = self$rv$dataIn, 
-                                         i = self$rv.filter$i, 
+        choice <- getListNbValuesInLines(obj = self$rv$dataIn,
+                                         i = self$rv.filter$i,
                                          type = self$rv.filter$widgets$ChooseFilters)
         tagList(
           mod_popover_for_help_ui(self$ns("modulePopover_keepVal")),
-          
+
           selectInput(self$ns("seuilNA"), NULL,
                       choices = choice,
                       selected = self$rv.filter$widgets$seuilNA,
                       width='150px'))
-        
+
       })
-      
-      
+
+
       output$ObserverMVFilteringDone <- renderUI({
         req(self$rv.filter$deleted.mvLines)
         #isolate({
-        
+
         n <- 0
         if(!is.null(self$rv.filter$deleted.mvLines))
           n <- nrow(self$rv.filter$deleted.mvLines)
-        
+
         # if (!r.nav$isDone[1])
         # {
-        #   return(NULL)  
+        #   return(NULL)
         # } else {
         #   h5(paste0("Missing values filtering done. ",n, " lines were deleted."))
         # }
-        
+
         # })
       })
-      
+
       output$helpTextMV <- renderUI({
         helpText("After checking the data, validate the filters.")
       })
-      
-      mod_format_DT_server('DT_naFilterSummary', 
+
+      mod_format_DT_server('DT_naFilterSummary',
                            table2show = reactive({self$rv.filter$widgets$DT_naFilterSummary}),
-                           style = reactive({NULL})) 
-      
+                           style = reactive({NULL}))
+
       observeEvent(input$ChooseFilters, ignoreInit=TRUE,{
         self$rv.filter$widgets$ChooseFilters <- input$ChooseFilters
       })
       observeEvent(input$seuilNA, ignoreInit=TRUE,{
         self$rv.filter$widgets$seuilNA <- input$seuilNA
       })
-      
+
     },
 
 #---------------------------------------------------------------------------
-    
 
+    Field_Filtering_ui = function(){},
 #---------------------------------------------------------------------------
     Field_Filtering_server = function(input, output){
-      
-      
+
+
       output$Field_Filtering <- renderUI({
         req(self$rv$dataIn)
         if (self$rv.filter$i == 0){ return(NULL)}
-        
+
         choice_field <- c("None",colnames(SummarizedExperiment::rowData(self$rv$dataIn[[self$rv.filter$i]])))
-        
+
         tagList(
           h4("Build the filter for the data you want to keep"),
           tags$div(
@@ -305,11 +309,11 @@ Filtering = R6Class(
                                   choices = choice_field,
                                   selected = self$rv.filter$widgets$fieldName)
             ),
-            
+
             tags$div( style="display:inline-block; vertical-align: middle;padding-right: 20px;",
                       uiOutput(self$ns('filterFieldOptions'))
             ),
-            
+
             # tags$div( style="display:inline-block; vertical-align: middle;",
             #           actionButton(self$ns("btn_test_fieldFilter"), "Test", class = actionBtnClass)
             #           ),
@@ -328,7 +332,7 @@ Filtering = R6Class(
             )
           )
         )
-        
+
       })
 
 
@@ -336,45 +340,45 @@ Filtering = R6Class(
         req(self$rv.filter$widgets$fieldName)
         if (self$rv.filter$widgets$fieldName == "None"){ return(NULL)}
         if (self$rv.filter$i == 0){ return(NULL)}
-        
-        
+
+
         numeric_operators <- c('==' = '==',
                                '<=' = '<=',
                                '<' = '<',
                                '>=' = '>=',
                                '>' = '>',
                                '!=' = '!=')
-        
+
         character_operators <- c( '==' = '==',
                                   '!=' = '!=')
-        
+
         vec <- SummarizedExperiment::rowData(self$rv$dataIn[[self$rv.filter$i]])[,self$rv.filter$widgets$fieldName]
         if (is.numeric(vec))
           operators <- numeric_operators
         else if (is.character(vec))
           operators <- character_operators
-        
+
         isolate({
           tagList(
             tags$div( style="display:inline-block; vertical-align: middle;padding-right: 20px;",
-                      selectInput(self$ns("operator"), "Operator", 
-                                  choices = operators, 
+                      selectInput(self$ns("operator"), "Operator",
+                                  choices = operators,
                                   selected = self$rv.filter$widgets$operator,
                                   width='100px')
             ),
             tags$div( style="display:inline-block; vertical-align: middle;padding-right: 20px;",
-                      textInput(self$ns("fieldFilter_value"), 
-                                "Value", 
-                                value = self$rv.filter$widgets$fieldFilter_value, 
+                      textInput(self$ns("fieldFilter_value"),
+                                "Value",
+                                value = self$rv.filter$widgets$fieldFilter_value,
                                 width='100px')
             )
           )
         })
       })
-      
-      
-      
-      
+
+
+
+
       output$preview_msg <- renderUI({
         req(self$rv.filter$tmp)
         self$rv.filter$deleted.field
@@ -383,54 +387,54 @@ Filtering = R6Class(
           h4('Info: With these settings, your dataset will loose all its data. We advice to change the parameters.')
         else
           h4('Info: A total of ', length(self$rv.filter$deleted.field), 'lines will be deleted from the last assay of your dataset.')
-        
+
       })
-      
-      
-      
+
+
+
       observeEvent(input$btn_remove_fieldFilter, ignoreInit = TRUE,{
         self$rv$dataIn
-        
+
         ind <- grep('field_filter_', names(self$rv$dataIn))
         if (length(ind) >= 1){
           self$rv$dataIn <- self$rv$dataIn[ ,  , -ind[length(ind)]]
           self$rv.filter$widgets$DT_fieldfilterSummary <- self$rv.filter$widgets$DT_fieldfilterSummary[-nrow(self$rv.filter$widgets$DT_fieldfilterSummary),]
         }
       })
-      
-      
+
+
       observeEvent(input$btn_perform_fieldFilter,ignoreInit=TRUE,{
         req(self$rv.filter$widgets$fieldName)
         if (self$rv.filter$widgets$fieldName == 'None'){return(NULL)}
         req(SummarizedExperiment::rowData(self$rv$dataIn[[self$rv.filter$i]])[ , self$rv.filter$widgets$fieldName])
-        
+
         # browser()
-        
+
         i <- self$rv.filter$i
         if (self$rv.filter$widgets$fieldFilter_value %in% c('', 'None')){return(NULL)}
         vec <- SummarizedExperiment::rowData(self$rv$dataIn[[self$rv.filter$i]])[,self$rv.filter$widgets$fieldName]
-        if(is.numeric(vec)) 
+        if(is.numeric(vec))
           if(is.na(as.numeric(self$rv.filter$widgets$fieldFilter_value)))
             return(NULL)
-        
+
         fieldname <- self$rv.filter$widgets$fieldName
         tagValue <- self$rv.filter$widgets$fieldFilter_value
-        
+
         field_filter <- NULL
         if (is.numeric(vec)){
-          field_filter <- QFeatures::VariableFilter(field = self$rv.filter$widgets$fieldName, 
-                                                    value = as.numeric(self$rv.filter$widgets$fieldFilter_value), 
+          field_filter <- QFeatures::VariableFilter(field = self$rv.filter$widgets$fieldName,
+                                                    value = as.numeric(self$rv.filter$widgets$fieldFilter_value),
                                                     condition = self$rv.filter$widgets$operator)
-        } else { 
+        } else {
           if (is.character(vec))
-            field_filter <- QFeatures::VariableFilter(field = self$rv.filter$widgets$fieldName, 
-                                                      value = as.character(self$rv.filter$widgets$fieldFilter_value), 
+            field_filter <- QFeatures::VariableFilter(field = self$rv.filter$widgets$fieldName,
+                                                      value = as.character(self$rv.filter$widgets$fieldFilter_value),
                                                       condition = self$rv.filter$widgets$operator)
         }
         tryCatch({
-          self$rv$dataIn <- DAPAR2::filterFeaturesSam(object = self$rv$dataIn, 
-                                                        i = self$rv.filter$i, 
-                                                        filter = field_filter, 
+          self$rv$dataIn <- DAPAR2::filterFeaturesSam(object = self$rv$dataIn,
+                                                        i = self$rv.filter$i,
+                                                        filter = field_filter,
                                                         name=paste0('field_filter_', self$rv.filter$i)
           )
         }
@@ -438,7 +442,7 @@ Filtering = R6Class(
           shinyjs::info(paste("Warning in CreateMSnSet",":",
                               conditionMessage(w),
                               sep=" "))
-          
+
         }, error = function(e) {
           print(e)
           # shinyjs::info(paste("Error :","CreateMSnSet",":",
@@ -446,56 +450,57 @@ Filtering = R6Class(
           #                     sep=" "))
         }, finally = {
           #cleanup-code
-          
+
           if (i < self$rv.filter$i) {
             i <- self$rv.filter$i
             MultiAssayExperiment::metadata(self$rv$dataIn[[i]])$Params[[paste0('field_filter_',i)]] <- paste0('field=', self$rv.filter$widgets$fieldName,
-                                                                                                                ' operator=',self$rv.filter$widgets$operator, 
+                                                                                                                ' operator=',self$rv.filter$widgets$operator,
                                                                                                                 ' value=', self$rv.filter$widgets$fieldFilter_value)
-            df <- data.frame(Filter = self$rv.filter$widgets$fieldName, 
-                             Condition = paste0(self$rv.filter$widgets$operator,' ',self$rv.filter$widgets$fieldFilter_value), 
-                             nbDeleted = nrow(self$rv$dataIn[[i-1]]) -nrow(self$rv$dataIn[[i]]) , 
+            df <- data.frame(Filter = self$rv.filter$widgets$fieldName,
+                             Condition = paste0(self$rv.filter$widgets$operator,' ',self$rv.filter$widgets$fieldFilter_value),
+                             nbDeleted = nrow(self$rv$dataIn[[i-1]]) -nrow(self$rv$dataIn[[i]]) ,
                              Total = nrow(self$rv$dataIn[[i]]))
-            
+
             self$rv.filter$widgets$DT_fieldfilterSummary <- rbind(self$rv.filter$widgets$DT_fieldfilterSummary, df)
           }
-          
-          
+
+
         })
       })
-      
-      
-      
-      mod_format_DT_server('DT_fieldfilterSummary', 
+
+
+
+      mod_format_DT_server('DT_fieldfilterSummary',
                            table2show = reactive({self$rv.filter$widgets$DT_fieldfilterSummary}),
-                           style = reactive({NULL})) 
-      
+                           style = reactive({NULL}))
+
       observeEvent(input$operator, ignoreInit=TRUE,{
         self$rv.filter$widgets$operator <- input$operator
       })
       observeEvent(input$fieldFilter_value, ignoreInit=TRUE,{
         self$rv.filter$widgets$fieldFilter_value <- input$fieldFilter_value
       })
-      
-      
+
+
       observeEvent(input$fieldName, ignoreInit=TRUE,{
         self$rv.filter$widgets$fieldName <- input$fieldName
       })
-      
+
     },
 
+    Validate_ui = function(){},
 #---------------------------------------------------------------------------
     Validate_server = function(input, output){
-      
+
       output$Validate <- renderUI({
         tagList(
           actionButton(self$ns("ValidateFilters"),"Save filtered dataset",class = actionBtnClass)
         )
       })
-      
-      
-      observeEvent(input$ValidateFilters,ignoreInit = TRUE,{ 
-      
+
+
+      observeEvent(input$ValidateFilters,ignoreInit = TRUE,{
+
       #get indices of temporary SE
       ind <- grep('_filter_', names(self$rv$dataIn))
       if (length(ind)>1){
@@ -510,8 +515,7 @@ Filtering = R6Class(
       })}
 )
 )
-    
-    
-    
 
-    
+
+
+
