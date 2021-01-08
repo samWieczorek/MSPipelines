@@ -29,8 +29,7 @@ server <- function(input, output, session) {
   obj <- QFeatures::addAssay(Exp1_R25_prot, (QFeatures::filterNA(Exp1_R25_prot,i=2))[[2]], "original_log_NAfiltered")
 
   mod_all_plots_server('plots',
-                       dataIn = reactive({obj}),
-                       indice = reactive({length(names(obj))})
+                       dataIn = reactive({obj})
                        )
 }
 

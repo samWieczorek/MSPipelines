@@ -1,23 +1,23 @@
 #' @title   mod_plots_heatmap_ui and mod_plots_heatmap_server
-#' 
+#'
 #' @description  A shiny Module.
 #'
 #' @param id shiny id
-#' 
+#'
 #' @param input internal
-#' 
+#'
 #' @param output internal
-#' 
+#'
 #' @param session internal
 #'
 #' @rdname mod_plots_heatmap
 #'
 #' @keywords internal
-#' 
-#' @export 
-#' 
-#' @importFrom shiny NS tagList 
-#' 
+#'
+#' @export
+#'
+#' @importFrom shiny NS tagList
+#'
 mod_plots_heatmap_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -48,7 +48,7 @@ mod_plots_heatmap_ui <- function(id){
                     selected='complete',
                     width="150px")
       ),
-      
+
       tags$hr(),
       uiOutput(ns("DS_PlotHeatmap"))
     )
@@ -57,29 +57,29 @@ mod_plots_heatmap_ui <- function(id){
 
 
 #' @rdname mod_plots_heatmap
-#' 
+#'
 #' @export
-#' 
+#'
 #' @keywords internal
-#' 
+#'
 #' @importFrom DAPAR2 heatmapD
-#' 
+#'
 #' @importFrom SummarizedExperiment assay
-#' 
+#'
 mod_plots_heatmap_server <- function(id, obj, conds, width = 900){
-  
+
   moduleServer(id, function(input, output, session){
     ns <- session$ns
-    
+
     observe({
       req(obj())
       if (class(obj()) != "SummarizedExperiment") { return(NULL) }
     })
-    
+
     limitHeatmap <- 20000
     height <- paste0(2*width/3,"px")
     width <- paste0(width,"px")
-    
+
     output$DS_PlotHeatmap <- renderUI({
       req(obj())
       if (nrow(SummarizedExperiment::assay(obj())) > limitHeatmap){
@@ -90,35 +90,35 @@ mod_plots_heatmap_server <- function(id, obj, conds, width = 900){
         )
       }
     })
-    
-    
-    
+
+
+
     output$heatmap_ui <- renderPlot({
       heatmap()
     })
-    
-    
-    
+
+
+
     heatmap <- reactive({
-      
+
       req(obj())
       req(input$linkage)
       req(input$distance)
-      
-      isolate({ 
+
+      isolate({
         withProgress(message = 'Making plot', value = 100, {
-          heatmapD(qData=SummarizedExperiment::assay(obj()),
+          DAPAR2::heatmapD(qData=SummarizedExperiment::assay(obj()),
                            conds=conds(),
-                           distance=input$distance, 
+                           distance=input$distance,
                            cluster=input$linkage,
                            dendro=TRUE)
         })
       })
     })
-    
-    
+
+
   })
-  
+
 }
 
 ## To be copied in the UI

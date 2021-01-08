@@ -16,6 +16,63 @@ mod_all_plots_ui <- function(id){
     shinyjs::useShinyjs(),
     fluidPage(
 
+      div( style="display:inline-block; vertical-align: middle; padding: 7px",
+           uiOutput(ns('chooseDataset_UI'))
+      ),
+      div( style="display:inline-block; vertical-align: middle; padding: 7px",
+           uiOutput(ns('ShowVignettes'))
+      ),
+
+      br(),br(),br(),
+      uiOutput(ns('ShowPlots'))
+  )
+  )
+
+}
+
+#' @description
+#' all_plots Server Function
+#'
+#' @param id xxxx
+#' @param dataIn xxxx
+#' @param indice xxx
+#'
+#' @export
+#'
+#' @noRd
+mod_all_plots_server <- function(id, dataIn){
+
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+
+    .width <- .height <- 40
+    ll <- c('quanti', 'intensity', 'pca', 'var_dist', 'corr_matrix', 'heatmap', 'group_mv')
+
+
+    rv <- reactiveValues(
+      current.plot = NULL,
+      current.obj = NULL,
+      current.indice = NULL,
+      colData = NULL,
+      conditions = NULL
+    )
+
+
+    output$ShowPlots <- renderUI({
+     tagList(
+       shinyjs::hidden(div(id=ns('div_plot_quanti_large'),mod_plots_se_explorer_ui(ns('plot_quanti_large')))),
+        shinyjs::hidden(div(id=ns('div_plot_intensity_large'),mod_plots_intensity_ui(ns('plot_intensity_large')))),
+        shinyjs::hidden(div(id=ns('div_plot_pca_large'),mod_plots_pca_ui(ns('plot_pca_large')))),
+        shinyjs::hidden(div(id=ns('div_plot_var_dist_large'),mod_plots_var_dist_ui(ns('plot_var_dist_large')))),
+        shinyjs::hidden(div(id=ns('div_plot_corr_matrix_large'),mod_plots_corr_matrix_ui(ns('plot_corr_matrix_large')))),
+        shinyjs::hidden(div(id=ns('div_plot_heatmap_large'),mod_plots_heatmap_ui(ns('plot_heatmap_large')))),
+        shinyjs::hidden(div(id=ns('div_plot_group_mv_large'),mod_plots_group_mv_ui(ns('plot_group_mv_large'))))
+     )
+    })
+
+
+    output$ShowVignettes <- renderUI({
+      tagList(
       tags$style(".topimg {
                             margin-left:-25px;
                             margin-right:-20px;
@@ -73,51 +130,33 @@ mod_all_plots_ui <- function(id){
             div(class="topimg",imageOutput(ns('plot_group_mv_small'), height=30, width=30))
           )
       )
-    ),
-
-    br(),br(),br(),
-    shinyjs::hidden(div(id=ns('div_plot_quanti_large'),mod_plots_se_explorer_ui(ns('plot_quanti_large')))),
-    shinyjs::hidden(div(id=ns('div_plot_intensity_large'),mod_plots_intensity_ui(ns('plot_intensity_large')))),
-    shinyjs::hidden(div(id=ns('div_plot_pca_large'),mod_plots_pca_ui(ns('plot_pca_large')))),
-    shinyjs::hidden(div(id=ns('div_plot_var_dist_large'),mod_plots_var_dist_ui(ns('plot_var_dist_large')))),
-    shinyjs::hidden(div(id=ns('div_plot_corr_matrix_large'),mod_plots_corr_matrix_ui(ns('plot_corr_matrix_large')))),
-    shinyjs::hidden(div(id=ns('div_plot_heatmap_large'),mod_plots_heatmap_ui(ns('plot_heatmap_large')))),
-    shinyjs::hidden(div(id=ns('div_plot_group_mv_large'),mod_plots_group_mv_ui(ns('plot_group_mv_large'))))
   )
 
-}
-
-#' @description
-#' all_plots Server Function
-#'
-#' @param id xxxx
-#' @param dataIn xxxx
-#' @param indice xxx
-#'
-#' @export
-#'
-#' @noRd
-mod_all_plots_server <- function(id, dataIn, indice){
-
-  moduleServer(id, function(input, output, session) {
-    ns <- session$ns
-
-    .width <- .height <- 40
-    ll <- c('quanti', 'intensity', 'pca', 'var_dist', 'corr_matrix', 'heatmap', 'group_mv')
+    })
 
 
-    rv <- reactiveValues(
-      current.plot = NULL,
-      current.obj = NULL,
-      colData = NULL,
-      conditions = NULL
-    )
 
     observeEvent(dataIn(), {
       rv$colData <- SummarizedExperiment::colData(dataIn())
       rv$metadata <- MultiAssayExperiment::metadata(dataIn())
       rv$conditions <- SummarizedExperiment::colData(dataIn())[['Condition']]
-      rv$current.obj <- dataIn()[[indice()]]
+    })
+
+observeEvent(input$chooseDataset, {
+  rv$current.indice <- which(names(dataIn())==input$chooseDataset)
+  rv$current.obj <- dataIn()[[rv$current.indice]]
+})
+
+    output$chooseDataset_UI <- renderUI({
+      if (length(names(dataIn())) == 0){
+        choices <- list(' '=character(0))
+      } else {
+        choices <- names(dataIn())
+      }
+      selectInput(ns('chooseDataset'), 'Dataset',
+                  choices = choices,
+                  selected = names(dataIn())[length(dataIn())],
+                  width=200)
     })
 
 
@@ -170,7 +209,7 @@ mod_all_plots_server <- function(id, dataIn, indice){
 
     mod_plots_heatmap_server("plot_heatmap_large",
                              obj = reactive({rv$current.obj}),
-                             conds = reactive({ Srv$conditions })
+                             conds = reactive({ rv$conditions })
     )
 
 
@@ -227,7 +266,7 @@ mod_all_plots_server <- function(id, dataIn, indice){
     ##### Plots for missing values
 
     output$plot_group_mv_small <- renderImage({
-      filename <- system.file("inst/extdata/images", "desc_group_mv.png", package="MSPipelines")
+      filename <- system.file("extdata/images", "desc_group_mv.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
@@ -238,7 +277,7 @@ mod_all_plots_server <- function(id, dataIn, indice){
 
     ############# Plots for SE explorer
     output$plot_quanti_small <- renderImage({
-      filename <- system.file("inst/extdata/images", "desc_quantiData.png", package="MSPipelines")
+      filename <- system.file("extdata/images", "desc_quantiData.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
@@ -250,7 +289,7 @@ mod_all_plots_server <- function(id, dataIn, indice){
     ##### Code for heatmap
 
     output$plot_heatmap_small <- renderImage({
-      filename <- system.file("inst/extdata/images", "desc_heatmap.png", package="MSPipelines")
+      filename <- system.file("extdata/images", "desc_heatmap.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
@@ -259,7 +298,7 @@ mod_all_plots_server <- function(id, dataIn, indice){
 
     #### Code for PCA
     output$plot_pca_small <- renderImage({
-      filename <- system.file("inst/extdata/images", "desc_pca.png", package="MSPipelines")
+      filename <- system.file("extdata/images", "desc_pca.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
@@ -271,7 +310,7 @@ mod_all_plots_server <- function(id, dataIn, indice){
     ################################################
     #### Code for intensity plots
     output$plot_intensity_small <- renderImage({
-      filename <- system.file("inst/extdata/images", "desc_intdistrib.png", package="MSPipelines")
+      filename <- system.file("extdata/images", "desc_intdistrib.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
@@ -283,7 +322,7 @@ mod_all_plots_server <- function(id, dataIn, indice){
     ############ Module for variance distribution plots
 
     output$plot_var_dist_small <- renderImage({
-      filename <- system.file("inst/extdata/images", "desc_varDist.jpg", package="MSPipelines")
+      filename <- system.file("extdata/images", "desc_varDist.jpg", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
