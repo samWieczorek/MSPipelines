@@ -4,16 +4,18 @@
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
-#' @noRd 
+#' @noRd
 #'
 #' @importFrom shiny NS tagList
-#' 
+#'
+#' @export
+#'
 mod_all_plots_ui <- function(id){
   ns <- NS(id)
   tagList(
     shinyjs::useShinyjs(),
     fluidPage(
-      
+
       tags$style(".topimg {
                             margin-left:-25px;
                             margin-right:-20px;
@@ -21,9 +23,7 @@ mod_all_plots_ui <- function(id){
                             margin-bottom:-20px;
                             padding: 10px;
                           }"),
-      div( style="display:inline-block; vertical-align: middle; padding: 7px",
-           uiOutput(ns('chooseDataset_UI'))
-      ),
+
       div( style="display:inline-block; vertical-align: middle; padding: 7px",
            tags$button(
              id = ns("btn_quanti"),
@@ -74,7 +74,7 @@ mod_all_plots_ui <- function(id){
           )
       )
     ),
-    
+
     br(),br(),br(),
     shinyjs::hidden(div(id=ns('div_plot_quanti_large'),mod_plots_se_explorer_ui(ns('plot_quanti_large')))),
     shinyjs::hidden(div(id=ns('div_plot_intensity_large'),mod_plots_intensity_ui(ns('plot_intensity_large')))),
@@ -84,81 +84,108 @@ mod_all_plots_ui <- function(id){
     shinyjs::hidden(div(id=ns('div_plot_heatmap_large'),mod_plots_heatmap_ui(ns('plot_heatmap_large')))),
     shinyjs::hidden(div(id=ns('div_plot_group_mv_large'),mod_plots_group_mv_ui(ns('plot_group_mv_large'))))
   )
-  
+
 }
 
+#' @description
 #' all_plots Server Function
 #'
-#' @noRd 
-mod_all_plots_server <- function(id, dataIn, indice, settings){
-  
+#' @param id xxxx
+#' @param dataIn xxxx
+#' @param indice xxx
+#'
+#' @export
+#'
+#' @noRd
+mod_all_plots_server <- function(id, dataIn, indice){
+
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    
+
     .width <- .height <- 40
     ll <- c('quanti', 'intensity', 'pca', 'var_dist', 'corr_matrix', 'heatmap', 'group_mv')
-    
-    
+
+
     rv <- reactiveValues(
       current.plot = NULL,
       current.obj = NULL,
-      settings = NULL
+      colData = NULL,
+      conditions = NULL
     )
-    
-    
-    rv$settings <- mod_settings_server("settings", obj=reactive({dataIn()}))
-    
-    
-    
+
+    observeEvent(dataIn(), {
+      rv$colData <- SummarizedExperiment::colData(dataIn())
+      rv$metadata <- MultiAssayExperiment::metadata(dataIn())
+      rv$conditions <- SummarizedExperiment::colData(dataIn())[['Condition']]
+      rv$current.obj <- dataIn()[[indice()]]
+    })
+
+
     mod_plots_se_explorer_server('plot_quanti_large',
                                  obj = reactive({rv$current.obj}),
-                                 originOfValues = reactive({ MultiAssayExperiment::metadata(dataIn())[['OriginOfValues']] }),
-                                 colData = reactive({ SummarizedExperiment::colData(dataIn()) })
+                                 originOfValues = reactive({ rv$metadata[['OriginOfValues']] }),
+                                 colData = reactive({ rv$colData })
     )
-    
-    
+
+
     mod_plots_intensity_server('plot_intensity_large',
                                dataIn=reactive({rv$current.obj}),
-                               meta = reactive({ MultiAssayExperiment::metadata(dataIn()) }),
-                               conds = reactive({ SummarizedExperiment::colData(dataIn())[['Condition']] }),
+                               meta = reactive({ rv$metadata }),
+                               conds = reactive({ rv$conditions }),
                                params = reactive({NULL}),
                                reset = reactive({FALSE}),
                                slave = reactive({FALSE}),
-                               base_palette = reactive({rv$settings()$examplePalette})
-    )
-    
-    
+                               base_palette = reactive({
+                                 DAPAR2::Example_Palette(
+                                   rv$conditions,
+                                   DAPAR2::Base_Palette(conditions = rv$conditions)
+                                 )
+                                 })
+                               )
+
+
     mod_plots_pca_server('plot_pca_large',
                          obj=reactive({rv$current.obj}),
-                         coldata = reactive({ SummarizedExperiment::colData(dataIn()) })
+                         coldata = reactive({ rv$colData })
     )
-    
-    
+
+
     mod_plots_var_dist_server('plot_var_dist_large',
                               obj=reactive({rv$current.obj}),
-                              conds = reactive({ SummarizedExperiment::colData(dataIn())[['Condition']] }),
-                              base_palette = reactive({rv$settings()$examplePalette})
-    )
-    
+                              conds = reactive({ rv$conditions}),
+                              base_palette = reactive({
+                                DAPAR2::Example_Palette(
+                                rv$conditions,
+                                DAPAR2::Base_Palette(conditions = rv$conditions)
+                              )
+                                })
+                              )
+
     mod_plots_corr_matrix_server('plot_corr_matrix_large',
                                  obj = reactive({rv$current.obj}),
                                  names = reactive({NULL}),
-                                 gradientRate = reactive({rv$settings()$defaultGradientRate}))
-    
-    
+                                 gradientRate = reactive({0.9})
+                                 )
+
+
     mod_plots_heatmap_server("plot_heatmap_large",
                              obj = reactive({rv$current.obj}),
-                             conds = reactive({ SummarizedExperiment::colData(dataIn())[['Condition']] })
+                             conds = reactive({ Srv$conditions })
     )
-    
-    
+
+
     mod_plots_group_mv_server("plot_group_mv_large",
                               obj = reactive({rv$current.obj}),
-                              conds = reactive({ SummarizedExperiment::colData(dataIn()) }),
-                              base_palette = reactive({rv$settings()$examplePalette})
+                              conds = reactive({ rv$colData }),
+                              base_palette = reactive({
+                                DAPAR2::Example_Palette(
+                                  rv$conditions,
+                                  DAPAR2::Base_Palette(conditions = rv$conditions)
+                                )
+                              })
     )
-    
-    
+
+    # Update the value of current.plot
     observeEvent(input$btn_quanti,{rv$current.plot <- 'quanti'})
     observeEvent(input$btn_intensity,{rv$current.plot <- 'intensity'})
     observeEvent(input$btn_pca,{rv$current.plot <- 'pca'})
@@ -166,33 +193,10 @@ mod_all_plots_server <- function(id, dataIn, indice, settings){
     observeEvent(input$btn_corr_matrix,{rv$current.plot <- 'corr_matrix'})
     observeEvent(input$btn_heatmap,{rv$current.plot <- 'heatmap'})
     observeEvent(input$btn_group_mv,{rv$current.plot <- 'group_mv'})
-    
-    
-    output$chooseDataset_UI <- renderUI({
-      if (length(names(dataIn())) == 0){
-        choices <- list(' '=character(0))
-      } else {
-        choices <- names(dataIn())
-      }
-      selectInput(ns('chooseDataset'), 'Dataset',
-                  choices = choices,
-                  selected = names(dataIn())[indice()],
-                  width=150)
-    })
-    
-    
-    observe({
-      req(input$chooseDataset)
-      dataIn()
-      
-      if ((class(dataIn()) != "QFeatures")){
-        warning('File format not recognized. Expected QFeatures')
-        return(NULL)
-      }
-      rv$current.obj <- dataIn()[[input$chooseDataset]]
-    })
-    
-    
+
+
+
+
     observeEvent(rv$current.plot,{
       req(rv$current.obj)
       for (i in ll){
@@ -202,93 +206,93 @@ mod_all_plots_server <- function(id, dataIn, indice, settings){
           shinyjs::hide(paste0('div_plot_',i,'_large'))
         }
       }
-      
+
     })
-    
-    
-    
-    
-    
+
+
+
+
+
     ################### Plot for correlation matrix
     output$plot_corr_matrix_small <- renderImage({
-      filename <- normalizePath(file.path('../../../inst/app/www/images/vignettes','desc_corrmatrix.png'))
+      filename <- system.file("extdata/images", "desc_corrmatrix.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
     }, deleteFile = FALSE)
-    
-    
-    
-    
+
+
+
+
     ##### Plots for missing values
-    
+
     output$plot_group_mv_small <- renderImage({
-      filename <- normalizePath(file.path('../../../inst/app/www/images/vignettes','desc_group_mv.png'))
+      filename <- system.file("inst/extdata/images", "desc_group_mv.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
     }, deleteFile = FALSE)
-    
-    
-    
-    
+
+
+
+
     ############# Plots for SE explorer
     output$plot_quanti_small <- renderImage({
-      filename <- normalizePath(file.path('../../../inst/app/www/images/vignettes','desc_quantiData.png'))
+      filename <- system.file("inst/extdata/images", "desc_quantiData.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
     }, deleteFile = FALSE)
-    
-    
-    
-    
+
+
+
+
     ##### Code for heatmap
-    
+
     output$plot_heatmap_small <- renderImage({
-      filename <- normalizePath(file.path('../../../inst/app/www/images/vignettes','desc_heatmap.png'))
+      filename <- system.file("inst/extdata/images", "desc_heatmap.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
     }, deleteFile = FALSE)
-    
-    
+
+
     #### Code for PCA
     output$plot_pca_small <- renderImage({
-      filename <- normalizePath(file.path('../../../inst/app/www/images/vignettes','desc_pca.png'))
+      filename <- system.file("inst/extdata/images", "desc_pca.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
     }, deleteFile = FALSE)
-    
-    
-    
-    
+
+
+
+
     ################################################
     #### Code for intensity plots
     output$plot_intensity_small <- renderImage({
-      filename <- normalizePath(file.path('../../../inst/app/www/images/vignettes','desc_intdistrib.png'))
+      filename <- system.file("inst/extdata/images", "desc_intdistrib.png", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
     }, deleteFile = FALSE)
-    
-    
-    
-    
+
+
+
+
     ############ Module for variance distribution plots
-    
+
     output$plot_var_dist_small <- renderImage({
-      filename <- normalizePath(file.path('../../../inst/app/www/images/vignettes','desc_varDist.jpg'))
+      filename <- system.file("inst/extdata/images", "desc_varDist.jpg", package="MSPipelines")
       list(src = filename,
            width = .width,
            height = .height)
     }, deleteFile = FALSE)
-    
+
     return(NULL)
-    
+
   })
-  
+
 }
 
 ## To be copied in the UI

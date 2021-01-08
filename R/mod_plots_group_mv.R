@@ -36,11 +36,16 @@ mod_plots_group_mv_ui <- function(id){
 
 #' @rdname mod_plots_group_mv
 #'
+#' @param id xxx
+#' @param obj xxx
+#' @param conds xxx
+#' @param base_palette xxx
+#'
 #' @export
 #'
 #' @keywords internal
 #'
-#' @importFrom DAPAR2 mvPerLinesHistoPerCondition_HC mvPerLinesHisto_HC
+#' @importFrom DAPAR2 mvPerLinesHistoPerCondition_HC mvPerLinesHisto_HC mvHisto_HC
 #' @importFrom SummarizedExperiment assay
 #' @import highcharter
 #'
@@ -63,7 +68,7 @@ mod_plots_group_mv_server <- function(id, obj, conds, base_palette){
       base_palette()
 
       withProgress(message = 'Making plot', value = 100, {
-        tmp <- mvHisto_HC(SummarizedExperiment::assay(obj()),
+        tmp <- DAPAR2::mvHisto_HC(SummarizedExperiment::assay(obj()),
                                   conds=conds(),
                                   palette=DAPAR2::Base_Palette(conditions = conds()))
       })
@@ -78,7 +83,7 @@ mod_plots_group_mv_server <- function(id, obj, conds, base_palette){
 
       isolate({
         withProgress(message = 'Making plot', value = 100, {
-          tmp <- mvPerLinesHisto_HC(SummarizedExperiment::assay(obj()),
+          tmp <- DAPAR2::mvPerLinesHisto_HC(SummarizedExperiment::assay(obj()),
                                             conds())
         })
       })
@@ -94,7 +99,7 @@ mod_plots_group_mv_server <- function(id, obj, conds, base_palette){
       base_palette()
 
       withProgress(message = 'Making plot', value = 100, {
-        tmp <- mvPerLinesHistoPerCondition_HC(SummarizedExperiment::assay(obj()),
+        tmp <- DAPAR2::mvPerLinesHistoPerCondition_HC(SummarizedExperiment::assay(obj()),
                                                       samplesData=conds(),
                                                       palette=DAPAR2::Base_Palette(conditions = conds()))
       })
