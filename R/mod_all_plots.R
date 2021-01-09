@@ -102,21 +102,18 @@ mod_all_plots_server <- function(id, dataIn){
                             margin-bottom:-20px;
                             padding: 10px;
                           }"),
-
-
-      actionButton(inputId = "A.button",
-      label = img(src=system.file("extdata/images", "desc_pca.png", package="MSPipelines"), width="30", height="30"),
-      style = "width: 50px; height: 50px;
-background: 'desc_pca.png';  background-size: cover; background-position: center;"),
+     # img(src = base64enc::dataURI(file=system.file('images', 'mod_plots_var_dist.png'), mime="image/png")),
 
       lapply(list.plots.module, function(x){
         div( style="display:inline-block; vertical-align: middle; padding: 7px",
              tags$button(
                id = ns(paste0("btn_", x)),
                class = "btn action-button",
-               img(src = system.file("extdata/images", "desc_pca.png", package="MSPipelines"),
-                   height = "30px")
-             )
+               style='background-color:transparent;padding:0px',
+               img(src = base64enc::dataURI(file=system.file('images', paste0(x, '.png'), package="MSPipelines"), mime="image/png"),
+                   width = '30px')
+
+        )
         )
         })
       )
