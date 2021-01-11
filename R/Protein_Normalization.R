@@ -23,11 +23,11 @@ Protein_Normalization = R6::R6Class(
 
       ## reactive values for variables in the module
       self$rv$widgets = list(method = "None",
-                               type = "None",
-                               varReduction = FALSE,
-                               quantile = 0.15,
-                               spanLOESS = 0.7,
-                               sync = FALSE)
+                             type = "overall",
+                             varReduction = FALSE,
+                             spanLOESS = 0.7,
+                             quantile = 0.15,
+                             sync = FALSE)
       self$rv$trackFromBoxplot = NULL
       self$rv$selectProt = NULL
       self$rv$resetTracking = FALSE
@@ -181,15 +181,19 @@ Protein_Normalization = R6::R6Class(
       })
 
       observeEvent(lapply(names(self$rv$widgets), function(x){input[[x]]}), ignoreInit=TRUE,  {
-        #browser()
+        print('##################################################"')
+        print(paste0(self$rv$widgets, collapse=' '))
         lapply(names(self$rv$widgets), function(x){
-          #req(!is.null(input[[x]]))
           self$rv$widgets[[x]] <- input[[x]]
         })
-
-        print(self$rv$widgets)
       })
 
+      # observeEvent(self$rv$widgets, ignoreInit = T,{
+      #   print('##################################################"')
+      #   lapply(names(self$rv$widgets), function(x){
+      #     self$rv$widgets[[x]] <- input[[x]]
+      #   })
+      #   })
 
 
       output$test_spanLOESS <- renderUI({
@@ -243,7 +247,6 @@ Protein_Normalization = R6::R6Class(
 
       output$choose_normalizationQuantile <- renderUI({
         req(self$rv$widgets$method == "QuantileCentering")
-
         tagList(
           mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
           textInput(self$ns("quantile"), NULL,
@@ -285,8 +288,8 @@ Protein_Normalization = R6::R6Class(
 
       GetIndicesOfSelectedProteins <- reactive({
         req(self$rv$trackFromBoxplot())
-        print('in GetIndicesOfSelectedProteins')
-        print(self$rv$trackFromBoxplot())
+        #print('in GetIndicesOfSelectedProteins')
+        #print(self$rv$trackFromBoxplot())
         ind <- NULL
         ll <- SummarizedExperiment::rowData(self$rv$dataIn[[length(self$rv$dataIn)]])[,MultiAssayExperiment::metadata(self$rv$dataIn)$keyId]
         tt <- self$rv$trackFromBoxplot()$typeSelect
@@ -309,7 +312,7 @@ Protein_Normalization = R6::R6Class(
         self$rv$dataIn
         # isolate({
         conds <- colData(self$rv$dataIn)$Condition
-
+        #print(head(assay(self$rv$dataIn, length(self$rv$dataIn))))
         switch(self$rv$widgets$method,
                None = self$rv$dataIn <- self$rv$temp.dataIn,
 
@@ -381,6 +384,8 @@ Protein_Normalization = R6::R6Class(
                                                       type = self$rv$widgets$type)
                }
         )
+        #print(head(assay(self$rv$dataIn, length(self$rv$dataIn))))
+
 
         self$ValidateCurrentPos()
       })
@@ -395,9 +400,9 @@ Protein_Normalization = R6::R6Class(
       output$viewComparisonNorm_UI <- renderHighchart({
         req(self$rv$dataIn)
         GetIndicesOfSelectedProteins()
-        print(GetIndicesOfSelectedProteins())
+        #print(GetIndicesOfSelectedProteins())
 
-        hc <- DAPAR2::compareNormalizationD_HC(qDataBefore = assay(self$rv$dataIn, length(self$rv$dataIn)),
+        hc <- DAPAR2::compareNormalizationD_HC(qDataBefore = assay(self$rv$temp.dataIn, length(self$rv$temp.dataIn)),
                                                qDataAfter = assay(self$rv$dataIn, length(self$rv$dataIn)),
                                                conds= MultiAssayExperiment::colData(self$rv$dataIn)$Condition,
                                                palette = DAPAR2::Base_Palette(conditions = colData(self$rv$dataIn)$Condition),

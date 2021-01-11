@@ -82,20 +82,6 @@ mod_plots_intensity_server <- function(id,
                                                         slave = reactive({slave()})
     )
 
-
-    observe({
-      params()
-      cat(paste0("Params() from - ", id, '\n'))
-      print(params())
-    })
-
-    observe({
-      slave()
-      cat(paste0("slave() from - ", id, '\n'))
-      print(slave())
-    })
-
-
     output$slave_tracking_ui <- renderUI({
       slave()
       dataIn()
