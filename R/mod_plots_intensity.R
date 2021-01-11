@@ -84,7 +84,7 @@ mod_plots_intensity_server <- function(id,
 
 
     observe({
-      req(params())
+      params()
       cat(paste0("Params() from - ", id, '\n'))
       print(params())
     })

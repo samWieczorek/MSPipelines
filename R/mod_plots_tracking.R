@@ -132,8 +132,7 @@ mod_plots_tracking_server <- function(id,
 
 
     observe({
-      params()
-req(rv.track$sync == TRUE)
+    req(rv.track$sync == TRUE)
       if (is.null(params())){
         updateSelectInput(session, "typeSelect", selected='None')
         updateSelectInput(session, "listSelect", NULL)

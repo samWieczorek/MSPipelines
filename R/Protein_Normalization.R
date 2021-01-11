@@ -12,15 +12,12 @@ Protein_Normalization = R6::R6Class(
   inherit = Magellan::Process,
   private = list(
     .config = list(name = 'Normalization',
-                   steps = c('Description', 'Step1', 'Step2'),
+                   steps = c('Description', 'Normalize', 'Save'),
                    mandatory = c(T, F, T)
     )
   ),
 
   public = list(
-
-
-
 
     Global_server = function(input, output){
 
@@ -65,14 +62,6 @@ Protein_Normalization = R6::R6Class(
       )
 
 
-      # observe({
-      #   browser()
-      #   print(paste0('sync = ', self$rv$widgets$sync))
-      #   print(self$rv$dataIn)
-      #   print(paste0(self$rv$widgets, collapse=' '))
-      #   print(paste0(names(self$rv$widgets), collapse=' '))
-      # })
-
       cat(paste0(class(self)[1], '::self$rv$trackFromBoxplot <- mod_plots_intensity_server("boxPlot_Norm") from - ', self$id, '\n\n'))
       self$rv$trackFromBoxplot <- mod_plots_intensity_server("boxPlot_Norm",
                                                              dataIn = reactive({self$rv$dataIn[[length(self$rv$dataIn)]]}),
@@ -81,22 +70,22 @@ Protein_Normalization = R6::R6Class(
                                                              base_palette = reactive({DAPAR2::Base_Palette(conditions=colData(self$rv$dataIn)[['Condition']])}),
                                                              params = reactive({
                                                                if(self$rv$widgets$sync)
-                                                                 self$selectProt()
+                                                                 self$rv$selectProt()
                                                                else
                                                                  NULL
                                                              }),
                                                              reset = reactive({self$rv$resetTracking}),
-                                                             slave = reactive({
-                                                               req(self$rv$widgets$sync)
-                                                               self$rv$widgets$sync})
+                                                             slave = reactive({self$rv$widgets$sync})
       )
+
     },
 
 
     #
-    # Description screen
+    ############################### Description screen ######################################
     #
     Description_server = function(input, output){
+
       observeEvent(input$btn_validate_Description, ignoreInit = T, ignoreNULL=T, {
         cat(paste0(class(self)[1], "::observeEvent(input$btn_validate_Description from - ", self$id, '\n'))
         private$InitializeDataIn()
@@ -126,10 +115,10 @@ Protein_Normalization = R6::R6Class(
 
     ############### SCREEN 2 ######################################
 
-    Step1_server = function(input, output){
+    Normalize_server = function(input, output){
 
       output$Screen_Prot_norm_1 <- renderUI({
-        #isolate({
+        isolate({
           tagList(
             div(
               div(
@@ -187,22 +176,18 @@ Protein_Normalization = R6::R6Class(
               )
             )
           )
-       # })
+        })
 
       })
 
-
-# observeEvent(input$method, { print('toto')
-#   print(paste0(names(self$rv$widgets), collapse=' '))
-#   browser()
-#   })
-
-
-      observe({
+      observeEvent(lapply(names(self$rv$widgets), function(x){input[[x]]}), ignoreInit=TRUE,  {
+        #browser()
         lapply(names(self$rv$widgets), function(x){
-          req(input[[x]])
+          #req(!is.null(input[[x]]))
           self$rv$widgets[[x]] <- input[[x]]
         })
+
+        print(self$rv$widgets)
       })
 
 
@@ -292,7 +277,7 @@ Protein_Normalization = R6::R6Class(
                         condition=( self$rv$widgets$method %in% c(DAPAR2::normalizeMethods.dapar()[-which(DAPAR2::normalizeMethods.dapar()=="GlobalQuantileAlignment")])))
 
         cond <- MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$typeOfData == 'protein'
-        trackAvailable <- self$rv$widgets$method %in% DAPAR2::normalizeMethods.dapar()
+        trackAvailable <- self$rv$widgets$method %in% DAPAR2::normalizeMethods.dapar(withTracking=TRUE)
         shinyjs::toggle('DivMasterProtSelection', condition= cond && trackAvailable)
         shinyjs::toggle('sync', condition= cond && trackAvailable)
       })
@@ -319,15 +304,11 @@ Protein_Normalization = R6::R6Class(
 
       ##' Reactive behavior : Normalization of data
       ##' @author Samuel Wieczorek
-      observeEvent(input$perform.normalization,{
+      observeEvent(input$perform.normalization, ignoreInit = TRUE, {
         self$rv$widgets$method
         self$rv$dataIn
         # isolate({
         conds <- colData(self$rv$dataIn)$Condition
-
-        ## the dataset whic will be normalized is always the original one
-        #self$rv$dataIn <- obj()
-        #i <- indice()
 
         switch(self$rv$widgets$method,
                None = self$rv$dataIn <- self$rv$temp.dataIn,
@@ -401,7 +382,7 @@ Protein_Normalization = R6::R6Class(
                }
         )
 
-        #self$i <- indice() + 1
+        self$ValidateCurrentPos()
       })
 
 
@@ -426,22 +407,15 @@ Protein_Normalization = R6::R6Class(
       })
 
 
-
-
-      observeEvent(input$btn_validate_Step1, ignoreInit = T, {
-
-        # Add your stuff code here
-        self$ValidateCurrentPos()
-      })
     },
 
-    Step1_ui = function(){
+Normalize_ui = function(){
       uiOutput(self$ns('Screen_Prot_norm_1'))
     },
 
 
     ########################### SCREEN STEP 2 ###################################
-    Step2_server = function(input, output){
+    Save_server = function(input, output){
       ## Logics to implement: here, we must take the last data not null
       # in previous datas. The objective is to take account
       # of skipped steps
@@ -455,7 +429,7 @@ Protein_Normalization = R6::R6Class(
 
     },
 
-    Step2_ui = function(){
+    Save_ui = function(){
       tagList(
         actionButton(self$ns("btn_validate_Step2"),
                      "Save normalization",
