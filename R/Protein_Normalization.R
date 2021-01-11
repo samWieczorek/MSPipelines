@@ -14,24 +14,41 @@ Protein_Normalization = R6::R6Class(
     .config = list(name = 'Normalization',
                    steps = c('Description', 'Normalize', 'Save'),
                    mandatory = c(T, F, T)
-    )
+    ),
+    new.name = 'proteins_norm'
   ),
 
   public = list(
 
-    Global_server = function(input, output){
+    Global_server = function(session, input, output){
 
-      ## reactive values for variables in the module
-      # self$rv$widgets = list(method = "None",
-      #                        type = "overall",
-      #                        varReduction = FALSE,
-      #                        spanLOESS = 0.7,
-      #                        quantile = 0.15,
-      #                        sync = FALSE)
       self$rv$trackFromBoxplot = NULL
       self$rv$selectProt = NULL
       self$rv$resetTracking = FALSE
 
+      # Update widgets if dataset already exists
+      observe({
+        #browser()
+        req(private$new.name %in% names(self$rv$temp.dataIn))
+
+        params <- metadata(self$rv$temp.dataIn[[private$new.name]])$Params
+
+        # if (!is.null(params$method))
+        #   updateSelectInput(session, inputId = self$ns('method'), selected = params$method)
+
+        if (!is.null(params$type))
+          updateSelectInput(session, inputId = 'type', selected = params$type)
+
+        if (!is.null(params$quantile))
+          updateNumericInput(session, 'quantile', value = params$quantile)
+
+        if (!is.null(params$spanLOESS))
+          updateNumericInput(session, 'spanLOESS', value = params$spanLOESS)
+
+        if (!is.null(params$varReduction))
+          updateCheckboxInput(session, inputId = 'spanLOESS', value = params$varReduction)
+
+      })
 
       ##
       ##
@@ -93,8 +110,11 @@ Protein_Normalization = R6::R6Class(
       })
 
       output$datasetDescription <- renderUI({
+        req(self$rv$temp.dataIn)
         tagList(
-          p(paste0('Dataset description: ', paste0(names(self$rv$temp.dataIn), collapse=", ")))
+          p(paste0('Dataset description: ', paste0(names(self$rv$temp.dataIn), collapse=", "))),
+          if (!is.null(metadata(self$rv$temp.dataIn[[length(self$rv$temp.dataIn)]])$Params))
+            p(paste0(names(self$rv$temp.dataIn)[length(self$rv$temp.dataIn)], ' : ', paste0(metadata(self$rv$temp.dataIn[[length(self$rv$temp.dataIn)]])$Params, collapse = ' ')))
         )
       })
     },
@@ -125,21 +145,25 @@ Protein_Normalization = R6::R6Class(
                 style="display:inline-block; vertical-align: middle; padding-right: 20px;",
                 selectInput(self$ns("method"),"Normalization method",
                             choices = c('None' = 'None', DAPAR2::normalizeMethods.dapar()),
-                            #selected = input$method,
+                            selected = metadata(self$rv$temp.dataIn[[private$new.name]])$Params$method,
                             width='200px')
               ),
               div(
                 style="display:inline-block; vertical-align: middle; padding-right: 20px;",
                 shinyjs::hidden(selectInput(self$ns("type"), "Normalization type",
                                    choices = c("overall", "within conditions"),
-                                   selected = input$type,
+                                   selected = metadata(self$rv$temp.dataIn[[private$new.name]])$Params$type,
                                    width='150px'))
               ),
               div(
                 style="display:inline-block; vertical-align: middle; padding-right: 20px;",
-                shinyjs::hidden(textInput(self$ns("spanLOESS"),
+                shinyjs::hidden(numericInput(self$ns("spanLOESS"),
                                  "Span",
-                                 value = 0.7,
+                                 value = if(!is.null(metadata(self$rv$temp.dataIn[[private$new.name]])$Params$spanLOESS))
+                                   metadata(self$rv$temp.dataIn[[private$new.name]])$Params$spanLOESS
+                                 else 0.7,
+                                 min = 0,
+                                 max = 1,
                                  width='100px')),
                 uiOutput(self$ns("test_spanLOESS")),
                 uiOutput(self$ns("choose_normalizationQuantile")),
@@ -167,7 +191,7 @@ Protein_Normalization = R6::R6Class(
               column(width=4,
                      shinyjs::hidden(checkboxInput(self$ns("sync"),
                                           "Synchronise with selection above",
-                                          value = input$sync)
+                                          value = FALSE)
                             ),
                      withProgress(message = 'Building plot',detail = '', value = 0, {
                        mod_plots_intensity_ui(self$ns("boxPlot_Norm"))
@@ -188,26 +212,26 @@ Protein_Normalization = R6::R6Class(
       #   })
       # })
 
-
-      output$test_spanLOESS <- renderUI({
-        req(input$spanLOESS)
-        if (!is.numeric(input$spanLOESS)){
-          tags$p("Please choose a number.")
-        }
-      })
-
-
-      output$test_normQuant <- renderUI({
-        req(input$quantile)
-        if (!is.numeric(input$quantile)){
-          tags$p("Please choose a number.")
-        }
-      })
+#
+#       output$test_spanLOESS <- renderUI({
+#         req(input$spanLOESS)
+#         if (!is.numeric(input$spanLOESS)){
+#           tags$p("Please choose a number.")
+#         }
+#       })
+#
+#
+#       output$test_normQuant <- renderUI({
+#         req(input$quantile)
+#         if (!is.numeric(input$quantile)){
+#           tags$p("Please choose a number.")
+#         }
+#       })
 
       output$helpForNormalizationMethods <- renderUI({
         req(input$method != "None")
 
-        switch(input$method,,
+        switch(input$method,
                GlobalQuantileAlignment= txt <- "This method proposes a normalization of important
          magnitude that should be cautiously used. It proposes to align the quantiles of all
          the replicates as described in [Other ref. 1]; practically it amounts to replace
@@ -242,10 +266,14 @@ Protein_Normalization = R6::R6Class(
 
         tagList(
           mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
-          textInput(self$ns("quantile"), NULL,
-                    value = 0.15,
-                    width='150px'),
-          uiOutput(self$ns("test_normQuant"))
+          numericInput(self$ns("quantile"), NULL,
+                    value = if(!is.null(metadata(self$rv$temp.dataIn[[private$new.name]])$Params$quantile))
+                      metadata(self$rv$temp.dataIn[[private$new.name]])$Params$quantile
+                    else 0.15,
+                    min = 0,
+                    max = 1,
+                    width='150px')
+          #uiOutput(self$ns("test_normQuant"))
         )
 
       })
@@ -255,7 +283,9 @@ Protein_Normalization = R6::R6Class(
         req(input$method == "MeanCentering")
         checkboxInput(self$ns("varReduction"),
                       "Include variance reduction",
-                      value = FALSE)
+                      value = if(!is.null(metadata(self$rv$temp.dataIn[[private$new.name]])$Params$varReduction))
+                        metadata(self$rv$temp.dataIn[[private$new.name]])$Params$varReduction
+                      else FALSE)
       })
 
 
@@ -311,7 +341,7 @@ Protein_Normalization = R6::R6Class(
                GlobalQuantileAlignment = {
                  self$rv$dataIn <- DAPAR2::normalizeD(object = self$rv$dataIn,
                                                       i = length(self$rv$dataIn),
-                                                      name = "proteins_norm",
+                                                      name = private$new.name,
                                                       method='GlobalQuantileAlignment'
                  )
                },
@@ -323,7 +353,7 @@ Protein_Normalization = R6::R6Class(
 
                  self$rv$dataIn <- DAPAR2::normalizeD(object = self$rv$dataIn,
                                                       i = length(self$rv$dataIn),
-                                                      name = "proteins_norm",
+                                                      name = private$new.name,
                                                       method = 'QuantileCentering',
                                                       conds = conds,
                                                       type = input$type,
@@ -336,7 +366,7 @@ Protein_Normalization = R6::R6Class(
                MeanCentering = {
                  self$rv$dataIn <- DAPAR2::normalizeD(object = self$rv$dataIn,
                                                       i = length(self$rv$dataIn),
-                                                      name ="proteins_norm",
+                                                      name = private$new.name,
                                                       method = 'MeanCentering',
                                                       conds = conds,
                                                       type = input$type,
@@ -348,7 +378,7 @@ Protein_Normalization = R6::R6Class(
                SumByColumns = {
                  self$rv$dataIn <- DAPAR2::normalizeD(object = self$rv$dataIn,
                                                       i = length(self$rv$dataIn),
-                                                      name = "proteins_norm",
+                                                      name = private$new.name,
                                                       method = 'SumByColumns',
                                                       conds = conds,
                                                       type = input$type,
@@ -359,7 +389,7 @@ Protein_Normalization = R6::R6Class(
                LOESS = {
                  self$rv$dataIn <- DAPAR2::normalizeD(object = self$rv$dataIn,
                                                       i = length(self$rv$dataIn),
-                                                      name = "proteins_norm",
+                                                      name = private$new.name,
                                                       method = 'LOESS',
                                                       conds = conds,
                                                       type = input$type,
@@ -370,7 +400,7 @@ Protein_Normalization = R6::R6Class(
                vsn = {
                  self$rv$dataIn <- DAPAR2::normalizeD(object = self$rv$dataIn,
                                                       i = length(self$rv$dataIn),
-                                                      name = "proteins_norm",
+                                                      name = private$new.name,
                                                       method = 'vsn',
                                                       conds = conds,
                                                       type = input$type)

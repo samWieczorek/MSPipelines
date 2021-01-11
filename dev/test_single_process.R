@@ -11,7 +11,7 @@ options(shiny.fullstacktrace = T)
 source(file.path('../R', 'global.R'), local=TRUE)$value
 source(file.path("../R", "mod_popover_for_help.R"), local = TRUE)$value
 source(file.path("../R", "mod_format_DT.R"), local = TRUE)$value
-source(file.path("../R", "Protein_Filtering.R"), local = TRUE)$value
+source(file.path("../R", "Protein_Normalization.R"), local = TRUE)$value
 
 source(file.path('.', 'Example_ProcessA.R'), local=TRUE)$value
 source(file.path('.', 'Example_ProcessB.R'), local=TRUE)$value
@@ -104,7 +104,12 @@ server = function(input, output){
   Pipeline$server(dataIn = reactive({rv$dataIn}))
 
   utils::data(Exp1_R25_prot, package='DAPARdata2')
-
+  Exp1_R25_prot <- addAssay(Exp1_R25_prot, Exp1_R25_prot[[length(Exp1_R25_prot)]], 'proteins_norm')
+  # metadata(Exp1_R25_prot[[length(Exp1_R25_prot)]])$Params <- list(
+  #   method = 'GlobalQuantileAlignment',
+  #   param2 = 'ABC',
+  #   param3 = 36
+  #   )
 
   observeEvent(input$send,{
     if (input$send%%2 != 0)
