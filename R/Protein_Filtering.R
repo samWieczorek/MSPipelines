@@ -12,6 +12,8 @@
 #' @import shinyjs
 #' @importFrom shinyalert useShinyalert
 #'
+#' @export
+#'
 Protein_Filtering = R6::R6Class(
   "Protein_Filtering",
   inherit = Magellan::Process,
@@ -30,7 +32,6 @@ Protein_Filtering = R6::R6Class(
       dataIn = NULL,
       dataOut = NULL,
       i = NULL,
-      settings = NULL,
       tmp = NULL,
 
       deleted.mvLines = NULL,
@@ -53,22 +54,22 @@ Protein_Filtering = R6::R6Class(
 
     #global variables for the module
     gFiltersList = c("None" = "None",
-                      "Empty lines" = "EmptyLines",
-                      "Whole matrix" = "WholeMatrix",
-                      "For every condition" = "AllCond",
-                      "At least one condition" = "AtLeastOneCond"),
+                     "Empty lines" = "EmptyLines",
+                     "Whole matrix" = "WholeMatrix",
+                     "For every condition" = "AllCond",
+                     "At least one condition" = "AtLeastOneCond"),
+
+
+
 
 
     Global_server = function(input, output){
       cat(paste0(class(self)[1], "::Global_server() from - ", self$id, '\n'))
 
-
-      self$rv.filter$settings <- mod_settings_server("settings", obj=reactive({self$rv$dataIn}))
-
       mod_plots_group_mv_server("MVPlots_filtering",
                                 obj = reactive({self$rv$dataIn[[length(self$rv$dataIn)]]}),
                                 conds = reactive({colData(self$rv$dataIn)}),
-                                base_palette = reactive({self$rv.filter$settings()$basePalette})
+                                base_palette = reactive({DAPAR2::Base_Palette(conditions = colData(self$rv$dataIn)$Condition)})
       )
 
       mod_popover_for_help_server("modulePopover_keepVal",
@@ -78,26 +79,19 @@ Protein_Filtering = R6::R6Class(
     },
 
 
-    Description_ui = function(){},
+    Description_ui = function(){
+      wellPanel(
+        tagList(
+          includeMarkdown( system.file("md", paste0(self$config$name, ".md"), package="MSPipelines")),
+          uiOutput(self$ns('datasetDescription')),
+          actionButton(self$ns('btn_validate_Description'),
+                       paste0('Start ', self$config$name),
+                       class = "btn-success")
+        )
+      )
+    },
     #---------------------------------------------------------------------------
     Description_server = function(input, output){
-
-
-      #-------------------------------------------------------------------------------------
-      output$Description <- renderUI({
-
-
-        wellPanel(
-          tagList(
-
-            actionButton(self$ns('btn_validate_Description'),
-                         paste0('Start ', self$config$name),
-                         class = btn_success_color),
-            includeMarkdown(paste0('./md/',self$config$name, ".md")),
-            uiOutput(self$ns('datasetDescription'))
-          )
-        )
-      })
 
       observeEvent(input$btn_validate_Description, ignoreInit = T, ignoreNULL=T, {
         cat(paste0(class(self)[1], "::observeEvent(input$btn_validate_Description from - ", self$id, '\n'))
@@ -115,7 +109,11 @@ Protein_Filtering = R6::R6Class(
     },
 
 
-    MV_Filtering_ui = function(){},
+    MV_Filtering_ui = function(){
+      tagList(
+        uiOutput(self$ns('MV_Filtering'))
+      )
+    },
 
   #---------------------------------------------------------------------------
     MV_Filtering_server = function(input, output){
@@ -239,7 +237,7 @@ Protein_Filtering = R6::R6Class(
         print(self$rv.filter$i)
         print(self$rv.filter$widgets$ChooseFilters)
        # browser()
-        choice <- getListNbValuesInLines(obj = self$rv$dataIn,
+        choice <- DAPAR2::getListNbValuesInLines(obj = self$rv$dataIn,
                                          i = self$rv.filter$i,
                                          type = self$rv.filter$widgets$ChooseFilters)
         tagList(
@@ -290,7 +288,7 @@ Protein_Filtering = R6::R6Class(
 
 #---------------------------------------------------------------------------
 
-    Field_Filtering_ui = function(){},
+    Field_Filtering_ui = function(){ uiOutput(self$ns('Field_Filtering'))},
 #---------------------------------------------------------------------------
     Field_Filtering_server = function(input, output){
 
@@ -488,7 +486,7 @@ Protein_Filtering = R6::R6Class(
 
     },
 
-    Validate_ui = function(){},
+    Validate_ui = function(){uiOutput(self$ns('Validate'))},
 #---------------------------------------------------------------------------
     Validate_server = function(input, output){
 

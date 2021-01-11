@@ -1,12 +1,7 @@
-#' @importFrom R6 R6Class
-#' @importFrom Magellan Process
-#' @import shiny
-#'
-#' @export
-#'
-Protein_Description = R6::R6Class(
-  "Protein_Description",
-  inherit = Magellan::Process,
+#Timeline_R6.R
+Example_Description = R6::R6Class(
+  "Example_Description",
+  inherit = Process,
   private = list(
     .config = list(name = 'Description',
                    steps = c('Description'),
@@ -35,14 +30,13 @@ Protein_Description = R6::R6Class(
 
 
     Description_ui = function(){
-
       wellPanel(
         tagList(
         includeMarkdown( system.file("app/md", paste0(self$config$name, ".md"), package="Magellan")),
         uiOutput(self$ns('datasetDescription')),
         actionButton(self$ns('btn_validate_Description'),
                      paste0('Start ', self$config$name),
-                     class = "btn-success")
+                     class = 'btn-success')
       )
       )
     }

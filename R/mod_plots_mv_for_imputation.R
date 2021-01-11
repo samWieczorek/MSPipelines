@@ -11,8 +11,8 @@
 #' @rdname mod_plots_mv_for_imputation
 #'
 #' @keywords internal
-#' @export 
-#' @importFrom shiny NS tagList 
+#' @export
+#' @importFrom shiny NS tagList
 mod_plots_mv_for_imputation_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -36,38 +36,38 @@ mod_plots_mv_for_imputation_server <- function(id,
                                                ind,
                                                title=NULL,
                                                palette=NULL){
-  
+
   moduleServer(id, function(input, output, session){
     ns <- session$ns
-    
-    
-    
+
+
+
     output$plot_viewNAbyMean <- renderHighchart({
       req(obj())
-      
+
       withProgress(message = 'Making MV Intensity plot', value = 100, {
-        hc_mvTypePlot2(obj = obj(), 
-                               i = ind(),
-                               title = title(), 
-                               palette = palette())
+        DAPAR2::hc_mvTypePlot2(obj = obj(),
+                       i = ind(),
+                       title = title(),
+                       palette = palette())
       })
     })
-    
-    
+
+
     output$plot_showImageNA <- renderPlot({
       req(obj())
-      
+
       withProgress(message = 'Making MV Heatmap plot', value = 100, {
-        mvImage(obj(), ind())
+        DAPAR2::mvImage(obj(), ind())
       })
-      
+
     })
-    
-    
+
+
   })
-  
-  
-  
+
+
+
 }
 
 ## To be copied in the UI

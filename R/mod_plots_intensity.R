@@ -66,6 +66,7 @@ mod_plots_intensity_server <- function(id,
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
+
     rv.modboxplot <- reactiveValues(
       indices = NULL,
       varTrack = NULL
@@ -75,22 +76,22 @@ mod_plots_intensity_server <- function(id,
 
     rv.modboxplot$varTrack <- mod_plots_tracking_server("slave_tracking",
                                                         obj = reactive({dataIn()}),
-                                                        keyId=reactive({meta()[['keyId']]}),
-                                                        params=reactive({params()}),
-                                                        reset=reactive({reset()}),
+                                                        keyId = reactive({meta()[['keyId']]}),
+                                                        params = reactive({params()}),
+                                                        reset = reactive({reset()}),
                                                         slave = reactive({slave()})
     )
 
 
     observe({
-      params()
-      print('params() = ')
+      req(params())
+      cat(paste0("Params() from - ", id, '\n'))
       print(params())
     })
 
     observe({
       slave()
-      print('slave() = ')
+      cat(paste0("slave() from - ", id, '\n'))
       print(slave())
     })
 
@@ -108,8 +109,8 @@ mod_plots_intensity_server <- function(id,
 
 
 
-    observeEvent(c(slave(),rv.modboxplot$varTrack()),ignoreInit = TRUE, ignoreNULL=FALSE, {
-      if (slave() == TRUE){
+    observeEvent(c(slave(), rv.modboxplot$varTrack()), ignoreInit = TRUE, ignoreNULL=FALSE, {
+      if (slave()){
         switch(params()$typeSelect,
                ProteinList = rv.modboxplot$indices <- params()$list.indices,
                Random = rv.modboxplot$indices <- params()$rand.indices,
@@ -144,10 +145,9 @@ mod_plots_intensity_server <- function(id,
       rv.modboxplot$indices
       tmp <- NULL
 
-
       pattern <- paste0('test',".boxplot")
       withProgress(message = 'Making plot', value = 100, {
-        tmp <- boxPlotD_HC(SummarizedExperiment::assay(dataIn()),
+        tmp <- DAPAR2::boxPlotD_HC(SummarizedExperiment::assay(dataIn()),
                                    conds = conds(),
                                    keyId = SummarizedExperiment::rowData(dataIn())[[ meta()[['keyId']] ]],
                                    palette = DAPAR2::Base_Palette(conditions=conds()),
@@ -171,7 +171,7 @@ mod_plots_intensity_server <- function(id,
         # png(outfile, width = 640, height = 480, units = "px")
         png(outfile)
         pattern <- paste0('test',".violinplot")
-        tmp <- violinPlotD(SummarizedExperiment::assay(dataIn()),
+        tmp <- DAPAR2::violinPlotD(SummarizedExperiment::assay(dataIn()),
                                    keyId = SummarizedExperiment::rowData(dataIn())[[ meta()[['keyId']] ]],
                                    conds = conds(),
                                    palette = DAPAR2::Base_Palette(conditions=conds()),

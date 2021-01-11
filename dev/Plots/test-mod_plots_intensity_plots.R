@@ -3,14 +3,13 @@ library(highcharter)
 library(SummarizedExperiment)
 
 
-source(file.path('../../../R', 'mod_settings.R'), local=TRUE)$value
-source(file.path('../../../R', 'mod_plots_tracking.R'), local=TRUE)$value
-source(file.path("../../../R","mod_plots_intensity.R"), local=TRUE)$value
-source(file.path("../../../R","mod_popover_for_help.R"), local=TRUE)$value
+source(file.path('../../R', 'mod_plots_tracking.R'), local=TRUE)$value
+source(file.path("../../R","mod_plots_intensity.R"), local=TRUE)$value
+source(file.path("../../R","mod_popover_for_help.R"), local=TRUE)$value
 
 
 ui <- fluidPage(
-  checkboxInput('sync', 'sync Slave with Master', value=FALSE),
+  uiOutput('check'),
   mod_plots_tracking_ui('master_tracking'),
   mod_plots_intensity_ui('plots_boxplots')
 )
@@ -23,7 +22,10 @@ server <- function(input, output, session) {
   keyId <- metadata(Exp1_R25_prot)[['keyId']]
 
   r <- reactiveValues(
-    master = NULL
+    master = NULL,
+    widgets = list(
+      sync = FALSE
+    )
   )
 
   metadata <- metadata(Exp1_R25_prot)
@@ -32,6 +34,7 @@ server <- function(input, output, session) {
   SummarizedExperiment::rowData(obj) <- cbind(SummarizedExperiment::rowData(obj),
                                               ProtOfInterest=rep(0,nrow(obj)))
   SummarizedExperiment::rowData(obj)$ProtOfInterest[10:20] <- 1
+
 
   r$master <- mod_plots_tracking_server('master_tracking',
                                         obj = reactive({obj}),
@@ -46,15 +49,21 @@ server <- function(input, output, session) {
                              meta = reactive({metadata}),
                              conds = reactive({conds}),
                              base_palette = reactive({DAPAR2::Example_Palette(conds, DAPAR2::Base_Palette(conditions = conds))}),
-                             params = reactive({if(input$sync)
-                               r$master() else NULL
-                             }),
+                             params = reactive({if(r$widgets$sync) r$master() else NULL }),
                              reset = reactive({FALSE}),
-                             slave = reactive({input$sync})
-
+                             slave = reactive({r$widgets$sync})
   )
 
-}
+
+  observeEvent(input$sync, { r$widgets$sync <- input$sync})
+
+  output$check <- renderUI({
+
+    checkboxInput('sync', 'sync Slave with Master', value=r$widgets$sync)
+  })
+
+
+  }
 
 
 shinyApp(ui, server)

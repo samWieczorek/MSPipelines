@@ -1,0 +1,105 @@
+#' pipe_prot_impute UI Function
+#'
+#' @description A shiny Module.
+#'
+#' @param id,input,output,session Internal parameters for {shiny}.
+#'
+#' @noRd
+#'
+#' @importFrom shiny NS tagList
+#'
+mod_pipe_protein_Imputation_ui <- function(id){
+  ns <- NS(id)
+  tagList(
+    shinyjs::useShinyjs(),
+    mod_navigation_ui(ns('nav_pipe_process'))
+  )
+}
+
+#' pipe_prot_impute Server Function
+#'
+#' @noRd
+#'
+#' @import QFeatures
+#'
+mod_pipe_protein_Imputation_server <- function(input, output, session, obj, indice){
+  ns <- session$ns
+
+
+
+  ########
+  observeEvent(obj(),{
+    cat('initialisation of rv.impute$dataIn')
+    rv.impute$dataIn <- obj()
+    rv.impute$i <- indice()
+    rv.impute$imputePlotsSteps$step0 <- obj()
+  })
+
+
+  #########
+
+
+
+
+  ##
+  ## Definitions of the screens
+  ##
+
+  ###---------------------------------------------------------------------------------###
+  ###                                 Screen 1                                        ###
+  ###---------------------------------------------------------------------------------###
+
+
+
+  ###---------------------------------------------------------------------------------###
+  ###                                 Screen 2                                        ###
+  ###---------------------------------------------------------------------------------###
+
+
+
+
+  ###---------------------------------------------------------------------------------###
+  ###                                 Screen 3                                        ###
+  ###---------------------------------------------------------------------------------###
+  output$Screen_Impute_3 <- renderUI({
+
+    tagList(
+      tags$div( style="display:inline-block; vertical-align: top; padding-right: 20px;",
+                actionButton(ns("ValidImputation"),"Save imputation", class = actionBtnClass)),
+      tags$div( style="display:inline-block; vertical-align: top; padding-right: 20px;",
+                uiOutput(ns("ImputationSaved"))),
+      tags$hr(),
+      mod_plots_mv_for_imputation_ui(ns("mvImputationPlots_Valid"))
+    )
+  })
+
+
+  observeEvent(input$ValidImputation,{
+    rv.impute$dataIn
+
+      ind <- grep('_impute', names(rv.impute$dataIn))
+
+      if (length(ind) > 1){
+        txt <- lapply(ind, function(x){MultiAssayExperiment::metadata(rv.impute$dataIn[[x]])$Params})
+        ind <- ind[-length(ind)]
+        rv.impute$dataIn <- rv.impute$dataIn[ , ,-ind]
+        MultiAssayExperiment::metadata(rv.impute$dataIn[[rv.impute$i]])$Params <- txt
+      } else if (length(ind)==1){
+        names(rv.impute$dataIn)[rv.impute$i] <- 'impute'
+      }
+
+      rv.impute$dataOut <- rv.impute$dataIn
+      r.nav$isDone[3] <- TRUE
+  })
+
+  return({reactive(rv.impute$dataOut)})
+
+
+}
+
+## To be copied in the UI
+# mod_pipe_protein_Imputation_ui("pipe_prot_impute_ui_1")
+
+## To be copied in the server
+# callModule(mod_pipe_protein_Imputation_server, "pipe_prot_impute_ui_1")
+
