@@ -18,102 +18,59 @@ source(file.path('.', 'Example_ProcessB.R'), local=TRUE)$value
 source(file.path('.', 'Example_Description.R'), local=TRUE)$value
 
 
-#----------------------------------------------------------------------------
-
-
-
-
-
-Pipeline <- R6Class(
-  "Pipeline",
-  public = list(
-    id = NULL,
-    ns = NULL,
-    tmp.return = reactiveValues(),
-    rv = reactiveValues(dataIn = NULL),
-    child.process = list(
-      #Example_Description = NULL,
-      #Example_ProcessA = NULL
-      #Filtering = NULL
-      Normalization = NULL
-      #Imputation = NULL
-      #Example_ProcessB = NULL
-    ),
-    initialize = function(id){
-      self$id <- id
-      self$ns <- NS(id)
-      self$child.process <- setNames(lapply(names(self$child.process),
-                                            function(x){
-                                              assign(x, base::get(paste0('Protein','_',x)))$new(self$ns(x))
-                                            }),
-                                     names(self$child.process)
-      )
-     # browser()
-    },
-
-
-    Launch_Servers = function(data){
-      lapply(names(self$child.process), function(x){
-        self$tmp.return[[x]] <- self$child.process[[x]]$server(dataIn = reactive({data()}))
-      })
-    },
-
-ui = function() {
-  tagList(
-    lapply(names(self$child.process), function(x){
-      wellPanel(h3(x), self$child.process[[x]]$ui())
-    })
-  )
-},
-server = function(dataIn ) {
-
-  self$Launch_Servers(data = reactive({dataIn()}))
-
-  moduleServer(self$id, function(input, output, session) {
-
-    output$show_ui <- renderUI({
-    tagList(
-     lapply(names(self$child.process), function(x){
-        wellPanel(h3(x), self$child.process[[x]]$ui())
-      })
-    )
-  })
-
-
-
-  })
-}
-)
-)
-
 rv <- reactiveValues()
-Pipeline <- Pipeline$new('App')
+process <- Protein_Normalization$new('Norm')
 ui = fluidPage(
   tagList(
     actionButton('send', 'Send dataset'),
-    Pipeline$ui()
+    actionButton('sendOldDataset', 'Send old dataset'),
+    process$ui()
   )
 )
 
 
 
 
-server = function(input, output){
+server = function(session, input, output){
   # Get a QFeatures dataset for example
 
-  Pipeline$server(dataIn = reactive({rv$dataIn}))
-
+  rv <- reactiveValues(
+    res = NULL
+  )
+  #rv$res <- Pipeline$server(dataIn = reactive({rv$dataIn}))
+  rv$res <- process$server(dataIn = reactive({rv$dataIn}))
   utils::data(Exp1_R25_prot, package='DAPARdata2')
-  Exp1_R25_prot <- addAssay(Exp1_R25_prot, Exp1_R25_prot[[length(Exp1_R25_prot)]], 'proteins_norm')
-  # metadata(Exp1_R25_prot[[length(Exp1_R25_prot)]])$Params <- list(
-  #   method = 'GlobalQuantileAlignment',
-  #   param2 = 'ABC',
-  #   param3 = 36
-  #   )
+
+
+  observe({
+    req(rv$res()$value)
+    print(metadata((rv$res()$value)[[length(rv$res())]])$Params)
+  })
 
   observeEvent(input$send,{
     if (input$send%%2 != 0)
       rv$dataIn <- Exp1_R25_prot
+    else
+      rv$dataIn <- NULL
+  })
+
+  observeEvent(input$sendOldDataset,{
+    if (input$sendOldDataset%%2 != 0){
+      dataset <- addAssay(Exp1_R25_prot, Exp1_R25_prot[[length(Exp1_R25_prot)]], 'proteins_norm')
+      metadata(dataset[[length(dataset)]])$Params$Normalize <- list(
+        method = "QuantileCentering",
+        type = "within conditions",
+        quantile = 0.15,
+        typeSelect = "ProteinList",
+        randSelect = "",
+        colSelect = NULL,
+        rand.indices = "",
+        col.indices = NULL,
+        listSelect = c("CON__P04264", "CON__P07477", "CON__P13645"),
+        list.indices = c(4, 5, 6)
+        )
+      rv$dataIn <- dataset
+    }
     else
       rv$dataIn <- NULL
   })

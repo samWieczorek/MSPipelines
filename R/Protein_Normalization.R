@@ -25,31 +25,15 @@ Protein_Normalization = R6::R6Class(
       self$rv$trackFromBoxplot = NULL
       self$rv$selectProt = NULL
       self$rv$resetTracking = FALSE
+      self$rv$datasetExists = FALSE
+      self$rv$params = NULL
 
-      # Update widgets if dataset already exists
-      observe({
-        #browser()
-        req(private$new.name %in% names(self$rv$temp.dataIn))
-
-        params <- metadata(self$rv$temp.dataIn[[private$new.name]])$Params
-
-        # if (!is.null(params$method))
-        #   updateSelectInput(session, inputId = self$ns('method'), selected = params$method)
-
-        if (!is.null(params$type))
-          updateSelectInput(session, inputId = 'type', selected = params$type)
-
-        if (!is.null(params$quantile))
-          updateNumericInput(session, 'quantile', value = params$quantile)
-
-        if (!is.null(params$spanLOESS))
-          updateNumericInput(session, 'spanLOESS', value = params$spanLOESS)
-
-        if (!is.null(params$varReduction))
-          updateCheckboxInput(session, inputId = 'spanLOESS', value = params$varReduction)
-
-      })
-
+observe({
+  req(self$rv$dataIn)
+  #browser()
+  self$rv$datasetExists <- private$new.name %in% names(self$rv$dataIn)
+  self$rv$params <- MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params
+})
       ##
       ##
       ## Calls to other modules
@@ -72,7 +56,18 @@ Protein_Normalization = R6::R6Class(
       cat(paste0(class(self)[1], '::self$rv$selectProt <- mod_plots_tracking_server() from - ', self$id, '\n\n'))
       self$rv$selectProt <- mod_plots_tracking_server("master_ProtSelection",
                                                       obj = reactive({self$rv$dataIn[[length(self$rv$dataIn)]]}),
-                                                      params = reactive({NULL}),
+                                                      params = reactive({
+                                                        if (self$rv$datasetExists){
+                                                          list(typeSelect = self$rv$params$Normalize$typeSelect,
+                                                               listSelect = self$rv$params$Normalize$listSelect,
+                                                               randSelect = self$rv$params$Normalize$randSelect,
+                                                               colSelect = self$rv$params$Normalize$colSelect,
+                                                               list.indices = self$rv$params$Normalize$list.indices,
+                                                               rand.indices = self$rv$params$Normalize$rand.indices,
+                                                               col.indices = self$rv$params$Normalize$col.indices)
+                                                          } else
+                                                            NULL
+                                                      }),
                                                       keyId = reactive({MultiAssayExperiment::metadata(self$rv$dataIn)[['keyId']]}),
                                                       reset = reactive({self$rv$resetTracking}),
                                                       slave = reactive({FALSE})
@@ -86,6 +81,7 @@ Protein_Normalization = R6::R6Class(
                                                              conds = reactive({colData(self$rv$dataIn)[['Condition']]}),
                                                              base_palette = reactive({DAPAR2::Base_Palette(conditions=colData(self$rv$dataIn)[['Condition']])}),
                                                              params = reactive({
+                                                               req(input$sync)
                                                                if(input$sync)
                                                                  self$rv$selectProt()
                                                                else
@@ -94,6 +90,8 @@ Protein_Normalization = R6::R6Class(
                                                              reset = reactive({self$rv$resetTracking}),
                                                              slave = reactive({input$sync})
       )
+
+#})
 
     },
 
@@ -113,7 +111,7 @@ Protein_Normalization = R6::R6Class(
         req(self$rv$temp.dataIn)
         tagList(
           p(paste0('Dataset description: ', paste0(names(self$rv$temp.dataIn), collapse=", "))),
-          if (!is.null(metadata(self$rv$temp.dataIn[[length(self$rv$temp.dataIn)]])$Params))
+          if (self$rv$datasetExists)
             p(paste0(names(self$rv$temp.dataIn)[length(self$rv$temp.dataIn)], ' : ', paste0(metadata(self$rv$temp.dataIn[[length(self$rv$temp.dataIn)]])$Params, collapse = ' ')))
         )
       })
@@ -145,22 +143,26 @@ Protein_Normalization = R6::R6Class(
                 style="display:inline-block; vertical-align: middle; padding-right: 20px;",
                 selectInput(self$ns("method"),"Normalization method",
                             choices = c('None' = 'None', DAPAR2::normalizeMethods.dapar()),
-                            selected = metadata(self$rv$temp.dataIn[[private$new.name]])$Params$method,
+                            selected = if (self$rv$datasetExists)
+                              self$rv$params$Normalize$method
+                            else 'None',
                             width='200px')
               ),
               div(
                 style="display:inline-block; vertical-align: middle; padding-right: 20px;",
                 shinyjs::hidden(selectInput(self$ns("type"), "Normalization type",
                                    choices = c("overall", "within conditions"),
-                                   selected = metadata(self$rv$temp.dataIn[[private$new.name]])$Params$type,
+                                   selected = if (self$rv$datasetExists)
+                                     self$rv$params$Normalize$type
+                                   else 'overall',
                                    width='150px'))
               ),
               div(
                 style="display:inline-block; vertical-align: middle; padding-right: 20px;",
                 shinyjs::hidden(numericInput(self$ns("spanLOESS"),
                                  "Span",
-                                 value = if(!is.null(metadata(self$rv$temp.dataIn[[private$new.name]])$Params$spanLOESS))
-                                   metadata(self$rv$temp.dataIn[[private$new.name]])$Params$spanLOESS
+                                 value = if (self$rv$datasetExists)
+                                   self$rv$params$Normalize$spanLOESS
                                  else 0.7,
                                  min = 0,
                                  max = 1,
@@ -204,29 +206,31 @@ Protein_Normalization = R6::R6Class(
 
       })
 
-      # observeEvent(lapply(names(input), function(x){input[[x]]}), ignoreInit=TRUE,  {
-      #   print('##################################################"')
-      #   print(paste0(input, collapse=' '))
-      #   lapply(names(input), function(x){
-      #     input[[x]] <- input[[x]]
-      #   })
-      # })
+      output$choose_normalizationQuantile <- renderUI({
+        req(input$method == "QuantileCentering")
 
-#
-#       output$test_spanLOESS <- renderUI({
-#         req(input$spanLOESS)
-#         if (!is.numeric(input$spanLOESS)){
-#           tags$p("Please choose a number.")
-#         }
-#       })
-#
-#
-#       output$test_normQuant <- renderUI({
-#         req(input$quantile)
-#         if (!is.numeric(input$quantile)){
-#           tags$p("Please choose a number.")
-#         }
-#       })
+        tagList(
+          mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
+          numericInput(self$ns("quantile"), NULL,
+                    value = if(self$rv$datasetExists)
+                      self$rv$params$Normalize$quantile
+                    else 0.15,
+                    min = 0,
+                    max = 1,
+                    width='150px')
+        )
+
+      })
+
+
+      output$choose_normalizationScaling <- renderUI({
+        req(input$method == "MeanCentering")
+        checkboxInput(self$ns("varReduction"),
+                      "Include variance reduction",
+                      value = if (self$rv$datasetExists)
+                        self$rv$params$Normalize$varReduction
+                      else FALSE)
+      })
 
       output$helpForNormalizationMethods <- renderUI({
         req(input$method != "None")
@@ -258,37 +262,6 @@ Protein_Normalization = R6::R6Class(
         tags$p(txt)
       })
 
-
-
-
-      output$choose_normalizationQuantile <- renderUI({
-        req(input$method == "QuantileCentering")
-
-        tagList(
-          mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
-          numericInput(self$ns("quantile"), NULL,
-                    value = if(!is.null(metadata(self$rv$temp.dataIn[[private$new.name]])$Params$quantile))
-                      metadata(self$rv$temp.dataIn[[private$new.name]])$Params$quantile
-                    else 0.15,
-                    min = 0,
-                    max = 1,
-                    width='150px')
-          #uiOutput(self$ns("test_normQuant"))
-        )
-
-      })
-
-
-      output$choose_normalizationScaling <- renderUI({
-        req(input$method == "MeanCentering")
-        checkboxInput(self$ns("varReduction"),
-                      "Include variance reduction",
-                      value = if(!is.null(metadata(self$rv$temp.dataIn[[private$new.name]])$Params$varReduction))
-                        metadata(self$rv$temp.dataIn[[private$new.name]])$Params$varReduction
-                      else FALSE)
-      })
-
-
       observeEvent(input$method, {
         req(self$rv$dataIn)
         if (input$method == "None"){
@@ -308,24 +281,53 @@ Protein_Normalization = R6::R6Class(
       })
 
 
-      GetIndicesOfSelectedProteins <- reactive({
+      Get_Selected_Proteins_For_Plots <- reactive({
         req(self$rv$trackFromBoxplot())
-        #print('in GetIndicesOfSelectedProteins')
-        #print(self$rv$trackFromBoxplot())
         ind <- NULL
-        ll <- SummarizedExperiment::rowData(self$rv$dataIn[[length(self$rv$dataIn)]])[,MultiAssayExperiment::metadata(self$rv$dataIn)$keyId]
-        tt <- self$rv$trackFromBoxplot()$typeSelect
-        switch(tt,
+        switch(self$rv$trackFromBoxplot()$typeSelect,
                ProteinList = ind <- self$rv$trackFromBoxplot()$list.indices,
                Random = ind <- self$rv$trackFromBoxplot()$rand.indices,
                Column = ind <- self$rv$trackFromBoxplot()$col.indices
-        )
+               )
+        if (length(ind)==0)
+            ind <- NULL
+
+        ind
+      })
+
+      Get_Selected_Proteins_For_Norm <- reactive({
+        ind <- NULL
+        # if(self$rv$datasetExists){
+        #   savedParam <- list(typeSelect = self$rv$params$Normalize$typeSelect,
+        #                      listSelect = self$rv$params$Normalize$listSelect,
+        #                      randSelect = self$rv$params$Normalize$randSelect,
+        #                      colSelect = self$rv$params$Normalize$colSelect,
+        #                      list.indices = self$rv$params$Normalize$list.indices,
+        #                      rand.indices = self$rv$params$Normalize$rand.indices,
+        #                      col.indices = self$rv$params$Normalize$col.indices
+        #                      )
+        #
+        #   switch(savedParam$typeSelect,
+        #          ProteinList = ind <- savedParam$list.indices,
+        #          Random = ind <- savedParam$rand.indices,
+        #          Column = ind <- savedParam$col.indices
+        #   )
+        # }
+
+        if (is.null(ind)) {
+          req(self$rv$selectProt())
+          switch(self$rv$selectProt()$typeSelect,
+                 ProteinList = ind <- self$rv$selectProt()$list.indices,
+                 Random = ind <- self$rv$selectProt()$rand.indices,
+                 Column = ind <- self$rv$selectProt()$col.indices
+          )
+        }
+
         if (length(ind)==0)
           ind <- NULL
 
         ind
       })
-
 
       ##' Reactive behavior : Normalization of data
       ##' @author Samuel Wieczorek
@@ -344,6 +346,11 @@ Protein_Normalization = R6::R6Class(
                                                       name = private$new.name,
                                                       method='GlobalQuantileAlignment'
                  )
+                 #Update params list for this step
+                 MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params$Normalize <- list(
+                   method = input$method
+                   )
+
                },
 
                QuantileCentering = {
@@ -357,10 +364,15 @@ Protein_Normalization = R6::R6Class(
                                                       method = 'QuantileCentering',
                                                       conds = conds,
                                                       type = input$type,
-                                                      subset.norm = GetIndicesOfSelectedProteins(),
+                                                      subset.norm = Get_Selected_Proteins_For_Norm(),
                                                       quantile = quant
                  )
-
+                 #Update params list for this step
+                 ll <- list(
+                   method = input$method,
+                   type = input$type,
+                   quantile = quant)
+                 MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params$Normalize <- append(ll, self$rv$selectProt())
                } ,
 
                MeanCentering = {
@@ -370,9 +382,15 @@ Protein_Normalization = R6::R6Class(
                                                       method = 'MeanCentering',
                                                       conds = conds,
                                                       type = input$type,
-                                                      subset.norm = GetIndicesOfSelectedProteins(),
+                                                      subset.norm = Get_Selected_Proteins_For_Norm(),
                                                       scaling = input$varReduction
                  )
+                 #Update params list for this step
+                 ll <- list(
+                   method = input$method,
+                   type = input$type,
+                   varReduction = input$varReduction)
+                 MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params$Normalize <- append(ll, self$rv$selectProt())
                },
 
                SumByColumns = {
@@ -382,8 +400,14 @@ Protein_Normalization = R6::R6Class(
                                                       method = 'SumByColumns',
                                                       conds = conds,
                                                       type = input$type,
-                                                      subset.norm = GetIndicesOfSelectedProteins()
+                                                      subset.norm = Get_Selected_Proteins_For_Norm()
                  )
+
+                 #Update params list for this step
+                 ll <- list(
+                   method = input$method,
+                   type = input$type)
+                 MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params$Normalize <- append(ll, self$rv$selectProt())
                },
 
                LOESS = {
@@ -395,6 +419,13 @@ Protein_Normalization = R6::R6Class(
                                                       type = input$type,
                                                       span = as.numeric(input$spanLOESS)
                  )
+
+                 #Update params list for this step
+                   MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params$Normalize <- list(
+                     method = input$method,
+                     type = input$type,
+                     spanLOESS = input$spanLOESS
+                   )
                },
 
                vsn = {
@@ -404,8 +435,12 @@ Protein_Normalization = R6::R6Class(
                                                       method = 'vsn',
                                                       conds = conds,
                                                       type = input$type)
+                 MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params$Normalize <- list(
+                   method = input$method,
+                   type = input$type)
                }
         )
+
         self$ValidateCurrentPos()
       })
 
@@ -413,14 +448,13 @@ Protein_Normalization = R6::R6Class(
       #######################
       output$viewComparisonNorm_UI <- renderHighchart({
         req(self$rv$dataIn)
-        GetIndicesOfSelectedProteins()
-        #print(GetIndicesOfSelectedProteins())
+        Get_Selected_Proteins_For_Plots()
 
         hc <- DAPAR2::compareNormalizationD_HC(qDataBefore = assay(self$rv$temp.dataIn, length(self$rv$temp.dataIn)),
                                                qDataAfter = assay(self$rv$dataIn, length(self$rv$dataIn)),
                                                conds= MultiAssayExperiment::colData(self$rv$dataIn)$Condition,
                                                palette = DAPAR2::Base_Palette(conditions = colData(self$rv$dataIn)$Condition),
-                                               subset.view = GetIndicesOfSelectedProteins(),
+                                               subset.view = Get_Selected_Proteins_For_Plots(),
                                                n = 50)
         hc
       })
@@ -435,19 +469,19 @@ Normalize_ui = function(){
 
     ########################### SCREEN STEP 2 ###################################
     Save_server = function(input, output){
+
+    #   mod_format_DT_server('show_params',
+    #                        table2show = reactive({
+    #                          req(self$rv$dataIn[[length(self$rv$dataIn)]])
+    #                          as.data.frame(metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params)
+    #                          }),
+    #                        style = reactive(NULL)
+    # )
+
       ## Logics to implement: here, we must take the last data not null
       # in previous datas. The objective is to take account
       # of skipped steps
       observeEvent(input$btn_validate_Step2, ignoreInit = T, {
-        if (input$method != "None") {
-          MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params <- list(
-            method = input$method,
-            type = input$type,
-            quantile = input$quantile,
-            varReduction = input$varReduction,
-            spanLOESS = input$spanLOESS
-          )
-        }
 
         self$ValidateCurrentPos()
       })
@@ -456,6 +490,7 @@ Normalize_ui = function(){
 
     Save_ui = function(){
       tagList(
+        mod_format_DT_ui(self$ns('show_params')),
         actionButton(self$ns("btn_validate_Step2"),
                      "Save normalization",
                      class = actionBtnClass,

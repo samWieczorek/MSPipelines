@@ -6,7 +6,11 @@
 #' @export
 #'
 Pipelines <- function(){
-  c('Protein', 'Peptide', 'P2p', 'Peptidomic')
+  list(Protein = c('protein'),
+       Peptide = c('peptide'),
+       P2p = c('protein'),
+       Peptidomic = c('peptide')
+       )
 }
 
 
