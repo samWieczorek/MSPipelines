@@ -24,6 +24,7 @@ ui = fluidPage(
   tagList(
     actionButton('send', 'Send dataset'),
     actionButton('sendOldDataset', 'Send old dataset'),
+    actionButton('updateStatus', 'Update status'),
     process$ui()
   )
 )
@@ -37,7 +38,6 @@ server = function(session, input, output){
   rv <- reactiveValues(
     res = NULL
   )
-  #rv$res <- Pipeline$server(dataIn = reactive({rv$dataIn}))
   rv$res <- process$server(dataIn = reactive({rv$dataIn}))
   utils::data(Exp1_R25_prot, package='DAPARdata2')
 
@@ -45,6 +45,10 @@ server = function(session, input, output){
   observe({
     req(rv$res()$value)
     print(metadata((rv$res()$value)[[length(rv$res())]])$Params)
+  })
+
+  observeEvent(input$updateStatus, {
+    process$rv$status <- c(1, 1, 1)
   })
 
   observeEvent(input$send,{
@@ -57,6 +61,7 @@ server = function(session, input, output){
   observeEvent(input$sendOldDataset,{
     if (input$sendOldDataset%%2 != 0){
       dataset <- addAssay(Exp1_R25_prot, Exp1_R25_prot[[length(Exp1_R25_prot)]], 'proteins_norm')
+      metadata(dataset[[length(dataset)]])$status <- c(1, 1, 1)
       metadata(dataset[[length(dataset)]])$Params$Normalize <- list(
         method = "QuantileCentering",
         type = "within conditions",

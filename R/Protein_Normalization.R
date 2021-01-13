@@ -28,11 +28,21 @@ Protein_Normalization = R6::R6Class(
       self$rv$datasetExists = FALSE
       self$rv$params = NULL
 
-observe({
-  req(self$rv$dataIn)
-  #browser()
-  self$rv$datasetExists <- private$new.name %in% names(self$rv$dataIn)
-  self$rv$params <- MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$Params
+observeEvent(req(self$rv$temp.dataIn), {
+
+  self$rv$datasetExists <- private$new.name %in% names(self$rv$temp.dataIn)
+  self$rv$params <- MultiAssayExperiment::metadata(self$rv$temp.dataIn[[length(self$rv$temp.dataIn)]])$Params
+#browser()
+
+   if (self$rv$datasetExists){
+     self$rv$status <- MultiAssayExperiment::metadata(self$rv$temp.dataIn[[length(self$rv$temp.dataIn)]])$status
+     updateSelectInput(session, 'method', selected = self$rv$params$Normalize$method)
+     updateSelectInput(session, 'type', selected = self$rv$params$Normalize$type)
+     updateNumericInput(session, 'quantile', value = self$rv$params$Normalize$quantile)
+     updateNumericInput(session, 'spanLOESS', value = self$rv$params$Normalize$spanLOESS)
+     updateCheckboxInput(session, 'varReduction', value = self$rv$params$Normalize$varReduction)
+   }
+
 })
       ##
       ##
@@ -135,90 +145,89 @@ observe({
 
     Normalize_server = function(input, output){
 
-      output$Screen_Prot_norm_1 <- renderUI({
-        isolate({
-          tagList(
-            div(
-              div(
-                style="display:inline-block; vertical-align: middle; padding-right: 20px;",
-                selectInput(self$ns("method"),"Normalization method",
-                            choices = c('None' = 'None', DAPAR2::normalizeMethods.dapar()),
-                            selected = if (self$rv$datasetExists)
-                              self$rv$params$Normalize$method
-                            else 'None',
-                            width='200px')
-              ),
-              div(
-                style="display:inline-block; vertical-align: middle; padding-right: 20px;",
-                shinyjs::hidden(selectInput(self$ns("type"), "Normalization type",
-                                   choices = c("overall", "within conditions"),
-                                   selected = if (self$rv$datasetExists)
-                                     self$rv$params$Normalize$type
-                                   else 'overall',
-                                   width='150px'))
-              ),
-              div(
-                style="display:inline-block; vertical-align: middle; padding-right: 20px;",
-                shinyjs::hidden(numericInput(self$ns("spanLOESS"),
-                                 "Span",
-                                 value = if (self$rv$datasetExists)
-                                   self$rv$params$Normalize$spanLOESS
-                                 else 0.7,
-                                 min = 0,
-                                 max = 1,
-                                 width='100px')),
-                uiOutput(self$ns("test_spanLOESS")),
-                uiOutput(self$ns("choose_normalizationQuantile")),
-                uiOutput(self$ns("choose_normalizationScaling"))
-              ),
-              div(
-                style="display:inline-block; vertical-align: middle; padding-right: 20px;",
-                shinyjs::hidden(
-                  div(id = self$ns('DivMasterProtSelection'),
-                    mod_plots_tracking_ui(self$ns('master_ProtSelection')))
-                  )
-              ),
-              div(
-                style="display:inline-block; vertical-align: middle; padding-right: 20px;",
-                shinyjs::hidden(actionButton(self$ns("perform.normalization"),
-                                    "Perform normalization",
-                                    class = actionBtnClass,
-                                    width="170px"))
-              )
-            ),
-            uiOutput(self$ns("helpForNormalizationMethods")),
-            tags$hr(),
-            fluidRow(
-              column(width=4, mod_plots_density_ui(self$ns("densityPlot_Norm"))),
-              column(width=4,
-                     shinyjs::hidden(checkboxInput(self$ns("sync"),
-                                          "Synchronise with selection above",
-                                          value = FALSE)
-                            ),
-                     withProgress(message = 'Building plot',detail = '', value = 0, {
-                       mod_plots_intensity_ui(self$ns("boxPlot_Norm"))
-                     })),
-              column(width=4, highchartOutput(self$ns("viewComparisonNorm_UI"))
-              )
-            )
-          )
-        })
-
-      })
+      # output$Screen_Prot_norm_1 <- renderUI({
+      #   isolate({
+      #     tagList(
+      #       div(
+      #         div(
+      #           style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+      #           selectInput(self$ns("method"),"Normalization method",
+      #                       choices = c('None' = 'None', DAPAR2::normalizeMethods.dapar()),
+      #                       selected = if (self$rv$datasetExists)
+      #                         self$rv$params$Normalize$method
+      #                       else 'None',
+      #                       width='200px')
+      #         ),
+      #         div(
+      #           style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+      #           shinyjs::hidden(selectInput(self$ns("type"), "Normalization type",
+      #                              choices = c("overall", "within conditions"),
+      #                              selected = if (self$rv$datasetExists)
+      #                                self$rv$params$Normalize$type
+      #                              else 'overall',
+      #                              width='150px'))
+      #         ),
+      #         div(
+      #           style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+      #           shinyjs::hidden(numericInput(self$ns("spanLOESS"),
+      #                            "Span",
+      #                            value = if (self$rv$datasetExists)
+      #                              self$rv$params$Normalize$spanLOESS
+      #                            else 0.7,
+      #                            min = 0,
+      #                            max = 1,
+      #                            width='100px')),
+      #           uiOutput(self$ns("choose_normalizationQuantile")),
+      #           uiOutput(self$ns("choose_normalizationScaling"))
+      #         ),
+      #         div(
+      #           style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+      #           shinyjs::hidden(
+      #             div(id = self$ns('DivMasterProtSelection'),
+      #               mod_plots_tracking_ui(self$ns('master_ProtSelection')))
+      #             )
+      #         ),
+      #         div(
+      #           style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+      #           shinyjs::hidden(actionButton(self$ns("perform.normalization"),
+      #                               "Perform normalization",
+      #                               class = actionBtnClass,
+      #                               width="170px"))
+      #         )
+      #       ),
+      #       uiOutput(self$ns("helpForNormalizationMethods")),
+      #       tags$hr(),
+      #       fluidRow(
+      #         column(width=4, mod_plots_density_ui(self$ns("densityPlot_Norm"))),
+      #         column(width=4,
+      #                shinyjs::hidden(checkboxInput(self$ns("sync"),
+      #                                     "Synchronise with selection above",
+      #                                     value = FALSE)
+      #                       ),
+      #                withProgress(message = 'Building plot',detail = '', value = 0, {
+      #                  mod_plots_intensity_ui(self$ns("boxPlot_Norm"))
+      #                })),
+      #         column(width=4, highchartOutput(self$ns("viewComparisonNorm_UI"))
+      #         )
+      #       )
+      #     )
+      #   })
+      #
+      # })
 
       output$choose_normalizationQuantile <- renderUI({
         req(input$method == "QuantileCentering")
 
         tagList(
           mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
-          numericInput(self$ns("quantile"), NULL,
+          disabled(numericInput(self$ns("quantile"), NULL,
                     value = if(self$rv$datasetExists)
                       self$rv$params$Normalize$quantile
                     else 0.15,
                     min = 0,
                     max = 1,
                     width='150px')
-        )
+        ))
 
       })
 
@@ -262,6 +271,12 @@ observe({
         tags$p(txt)
       })
 
+
+      output$show_boxplot <- renderUI({
+        withProgress(message = 'Building plot', detail = '', value = 0, {
+          mod_plots_intensity_ui(self$ns("boxPlot_Norm"))
+        })
+      })
       observeEvent(input$method, {
         req(self$rv$dataIn)
         if (input$method == "None"){
@@ -277,6 +292,7 @@ observe({
         cond <- MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$typeOfData == 'protein'
         trackAvailable <- input$method %in% DAPAR2::normalizeMethods.dapar(withTracking=TRUE)
         shinyjs::toggle('DivMasterProtSelection', condition= cond && trackAvailable)
+
         shinyjs::toggle('sync', condition= cond && trackAvailable)
       })
 
@@ -297,22 +313,6 @@ observe({
 
       Get_Selected_Proteins_For_Norm <- reactive({
         ind <- NULL
-        # if(self$rv$datasetExists){
-        #   savedParam <- list(typeSelect = self$rv$params$Normalize$typeSelect,
-        #                      listSelect = self$rv$params$Normalize$listSelect,
-        #                      randSelect = self$rv$params$Normalize$randSelect,
-        #                      colSelect = self$rv$params$Normalize$colSelect,
-        #                      list.indices = self$rv$params$Normalize$list.indices,
-        #                      rand.indices = self$rv$params$Normalize$rand.indices,
-        #                      col.indices = self$rv$params$Normalize$col.indices
-        #                      )
-        #
-        #   switch(savedParam$typeSelect,
-        #          ProteinList = ind <- savedParam$list.indices,
-        #          Random = ind <- savedParam$rand.indices,
-        #          Column = ind <- savedParam$col.indices
-        #   )
-        # }
 
         if (is.null(ind)) {
           req(self$rv$selectProt())
@@ -458,12 +458,74 @@ observe({
                                                n = 50)
         hc
       })
-
-
     },
 
 Normalize_ui = function(){
-      uiOutput(self$ns('Screen_Prot_norm_1'))
+     # uiOutput(self$ns('Screen_Prot_norm_1'))
+  isolate({
+    tagList(
+      div(
+        div(
+          style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+          selectInput(self$ns("method"),"Normalization method",
+                      choices = c('None' = 'None', DAPAR2::normalizeMethods.dapar()),
+                      width='200px')
+        ),
+        div(
+          style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+          shinyjs::hidden(selectInput(self$ns("type"), "Normalization type",
+                                      choices = c("overall", "within conditions"),
+                                      width='150px'))
+        ),
+        div(
+          style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+          shinyjs::hidden(numericInput(self$ns("spanLOESS"),
+                                       "Span",
+                                       value = 0.7,
+                                       min = 0,
+                                       max = 1,
+                                       width='100px')),
+          mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
+          numericInput(self$ns("quantile"), NULL,
+                                value = 0.15,
+                                min = 0,
+                                max = 1,
+                                width='150px'),
+         # uiOutput(self$ns("choose_normalizationQuantile")),
+          uiOutput(self$ns("choose_normalizationScaling"))
+        ),
+        div(
+          style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+          shinyjs::hidden(
+            div(id = self$ns('DivMasterProtSelection'),
+                mod_plots_tracking_ui(self$ns('master_ProtSelection')))
+          )
+        ),
+        div(
+          style="display:inline-block; vertical-align: middle; padding-right: 20px;",
+          shinyjs::hidden(actionButton(self$ns("perform.normalization"),
+                                       "Perform normalization",
+                                       class = actionBtnClass,
+                                       width="170px"))
+        )
+      ),
+      uiOutput(self$ns("helpForNormalizationMethods")),
+      tags$hr(),
+      fluidRow(
+        column(width=4, mod_plots_density_ui(self$ns("densityPlot_Norm"))),
+        column(width=4,
+               shinyjs::hidden(checkboxInput(self$ns("sync"),
+                                             "Synchronise with selection above",
+                                             value = FALSE)
+               ),
+               uiOutput(self$ns('show_boxplot'))
+               ),
+        column(width=4, highchartOutput(self$ns("viewComparisonNorm_UI"))
+        )
+      )
+    )
+  })
+
     },
 
 
@@ -482,7 +544,7 @@ Normalize_ui = function(){
       # in previous datas. The objective is to take account
       # of skipped steps
       observeEvent(input$btn_validate_Step2, ignoreInit = T, {
-
+        MultiAssayExperiment::metadata(self$rv$dataIn[[length(self$rv$dataIn)]])$status <- self$rv$status
         self$ValidateCurrentPos()
       })
 
