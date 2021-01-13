@@ -44,9 +44,20 @@ server <- function(input, output, session) {
 
   rowData(obj) <- cbind(rowData(obj), ProtOfInterest=sample(c(0,1), nrow(obj), TRUE))
 
+  #obj <- NULL
+  params <- list(
+    typeSelect = "ProteinList",
+    randSelect = "",
+    colSelect = NULL,
+    rand.indices = "",
+    col.indices = NULL,
+    listSelect = c("CON__P04264", "CON__P07477", "CON__P13645"),
+    list.indices = c(4, 5, 6)
+  )
+
   r$master <- mod_plots_tracking_server('master_tracking',
                          obj = reactive({obj}),
-                         params=reactive({NULL}),
+                         params=reactive({params}),
                          keyId=reactive({keyId}),
                          reset=reactive({FALSE}),
                          slave = reactive({FALSE}))
@@ -57,14 +68,7 @@ server <- function(input, output, session) {
                           else NULL}),
                         keyId=reactive({keyId}),
                         reset=reactive({FALSE}),
-                        slave=reactive({NULL}))
-
-
-  # observe({
-  #   r$slave()
-  #   print(r$slave())
-  # })
-
+                        slave=reactive({TRUE}))
 
   output$master_out <- renderUI({
     r$master()

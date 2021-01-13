@@ -41,6 +41,11 @@ observeEvent(req(self$rv$temp.dataIn), {
      updateNumericInput(session, 'quantile', value = self$rv$params$Normalize$quantile)
      updateNumericInput(session, 'spanLOESS', value = self$rv$params$Normalize$spanLOESS)
      updateCheckboxInput(session, 'varReduction', value = self$rv$params$Normalize$varReduction)
+     updateCheckboxInput(session, 'sync', value = TRUE)
+
+     #Force initialize dataIn because the first step is disabled and the user
+     # cannot access to the 'Start' button
+     private$InitializeDataIn()
    }
 
 })
@@ -215,31 +220,31 @@ observeEvent(req(self$rv$temp.dataIn), {
       #
       # })
 
-      output$choose_normalizationQuantile <- renderUI({
-        req(input$method == "QuantileCentering")
+      # output$choose_normalizationQuantile <- renderUI({
+      #   req(input$method == "QuantileCentering")
+      #
+      #   tagList(
+      #     mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
+      #     disabled(numericInput(self$ns("quantile"), NULL,
+      #               value = if(self$rv$datasetExists)
+      #                 self$rv$params$Normalize$quantile
+      #               else 0.15,
+      #               min = 0,
+      #               max = 1,
+      #               width='150px')
+      #   ))
+      #
+      # })
 
-        tagList(
-          mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
-          disabled(numericInput(self$ns("quantile"), NULL,
-                    value = if(self$rv$datasetExists)
-                      self$rv$params$Normalize$quantile
-                    else 0.15,
-                    min = 0,
-                    max = 1,
-                    width='150px')
-        ))
 
-      })
-
-
-      output$choose_normalizationScaling <- renderUI({
-        req(input$method == "MeanCentering")
-        checkboxInput(self$ns("varReduction"),
-                      "Include variance reduction",
-                      value = if (self$rv$datasetExists)
-                        self$rv$params$Normalize$varReduction
-                      else FALSE)
-      })
+      # output$choose_normalizationScaling <- renderUI({
+      #   req(input$method == "MeanCentering")
+      #   checkboxInput(self$ns("varReduction"),
+      #                 "Include variance reduction",
+      #                 value = if (self$rv$datasetExists)
+      #                   self$rv$params$Normalize$varReduction
+      #                 else FALSE)
+      # })
 
       output$helpForNormalizationMethods <- renderUI({
         req(input$method != "None")
@@ -277,6 +282,10 @@ observeEvent(req(self$rv$temp.dataIn), {
           mod_plots_intensity_ui(self$ns("boxPlot_Norm"))
         })
       })
+
+
+
+      # Update UI w.r.t method value
       observeEvent(input$method, {
         req(self$rv$dataIn)
         if (input$method == "None"){
@@ -285,6 +294,7 @@ observeEvent(req(self$rv$temp.dataIn), {
         }
         shinyjs::toggle("perform.normalization", condition = input$method != "None")
         shinyjs::toggle("spanLOESS", condition = input$method == "LOESS")
+        shinyjs::toggle("varReduction", condition = input$method == "MeanCentering")
 
         shinyjs::toggle("type",
                         condition=( input$method %in% c(DAPAR2::normalizeMethods.dapar()[-which(DAPAR2::normalizeMethods.dapar()=="GlobalQuantileAlignment")])))
@@ -479,12 +489,12 @@ Normalize_ui = function(){
         ),
         div(
           style="display:inline-block; vertical-align: middle; padding-right: 20px;",
-          shinyjs::hidden(numericInput(self$ns("spanLOESS"),
-                                       "Span",
+          shinyjs::hidden(numericInput(self$ns("spanLOESS"), "Span",
                                        value = 0.7,
                                        min = 0,
                                        max = 1,
                                        width='100px')),
+
           mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
           numericInput(self$ns("quantile"), NULL,
                                 value = 0.15,
@@ -492,7 +502,9 @@ Normalize_ui = function(){
                                 max = 1,
                                 width='150px'),
          # uiOutput(self$ns("choose_normalizationQuantile")),
-          uiOutput(self$ns("choose_normalizationScaling"))
+         # uiOutput(self$ns("choose_normalizationScaling"))
+         checkboxInput(self$ns("varReduction"), "Include variance reduction",
+                       value = FALSE)
         ),
         div(
           style="display:inline-block; vertical-align: middle; padding-right: 20px;",
@@ -512,10 +524,11 @@ Normalize_ui = function(){
       uiOutput(self$ns("helpForNormalizationMethods")),
       tags$hr(),
       fluidRow(
-        column(width=4, mod_plots_density_ui(self$ns("densityPlot_Norm"))),
         column(width=4,
-               shinyjs::hidden(checkboxInput(self$ns("sync"),
-                                             "Synchronise with selection above",
+               mod_plots_density_ui(self$ns("densityPlot_Norm"))
+               ),
+        column(width=4,
+               shinyjs::hidden(checkboxInput(self$ns("sync"), "Synchronise with selection above",
                                              value = FALSE)
                ),
                uiOutput(self$ns('show_boxplot'))

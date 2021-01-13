@@ -23,10 +23,32 @@ mod_plots_tracking_ui <- function(id){
   tagList(
     shinyjs::useShinyjs(),
     # shinyjs::hidden(actionButton(ns('rst_btn'), 'Reset')),
-    uiOutput(ns('selectType_UI')),
-    shinyjs::hidden(uiOutput(ns("listSelect_UI"))),
-    shinyjs::hidden(uiOutput(ns("randomSelect_UI"))),
-    shinyjs::hidden(uiOutput(ns("columnSelect_UI")))
+    #uiOutput(ns('selectType_UI')),
+    selectInput(ns("typeSelect"), "Type of selection",
+                choices=c("None" = "None",
+                          "Protein list" = "ProteinList",
+                          "Random" = "Random",
+                          "Specific column" = "Column"),
+                width=('130px')),
+    shinyjs::hidden(
+      selectInput(ns("listSelect"),
+                  "Protein for normalization",
+                choices = c('None'),
+                  multiple = TRUE,
+                  width='400px'
+      )
+      ),
+    shinyjs::hidden(
+      textInput(ns("randSelect"),
+                "Random",
+                width = ('120px'))
+      ),
+    shinyjs::hidden(
+      selectInput(ns("colSelect"),
+                  "Column",
+                  choices = c('')
+                )
+    )
   )
 }
 
@@ -66,9 +88,49 @@ mod_plots_tracking_server <- function(id,
     )
 
 
-    observeEvent(req(obj()),{
+    observe({
+      req(obj())
       if (class(obj()) != "SummarizedExperiment") { return(NULL) }
+
+      rv.track$res <- list(typeSelect = if (is.null(params()$typeSelect)) 'None' else params()$typeSelect,
+                           listSelect = params()$listSelect,
+                           randSelect = params()$randSelect,
+                           colSelect = params()$colSelect,
+                           list.indices = NULL,
+                           rand.indices = '',
+                           col.indices = NULL)
+
+
+      updateSelectInput(session, 'typeSelect',
+                        selected = rv.track$res$typeSelect)
+      updateSelectInput(session, 'listSelect',
+                        choices = SummarizedExperiment::rowData(obj())[[keyId()]],
+                        selected = rv.track$res$listSelect)
+      updateTextInput(session, 'randSelect',
+                      value = rv.track$res$randSelect)
+      updateSelectInput(session, 'colSelect',
+                        selected = rv.track$res$colSelect,
+                        colnames(SummarizedExperiment::rowData(obj()))
+      )
+
+      shinyjs::toggle(id = 'listSelect', condition = input$typeSelect == 'ProteinList')
+      shinyjs::toggle(id = 'randSelect', condition = input$typeSelect == 'Random')
+      shinyjs::toggle(id = 'colSelect', condition = input$typeSelect == 'Column')
+
     })
+
+
+    observeEvent(req(input$typeSelect),{
+
+      rv.track$res <- list(typeSelect = if (is.null(input$typeSelect)) 'None' else input$typeSelect,
+                           listSelect = NULL,
+                           randSelect = '',
+                           colSelect = NULL,
+                           list.indices = NULL,
+                           rand.indices = '',
+                           col.indices = NULL)
+    })
+
 
 
     observeEvent(slave(),{
@@ -78,42 +140,46 @@ mod_plots_tracking_server <- function(id,
         rv.track$sync <- slave()
     })
 
-    output$selectType_UI <- renderUI({
-      selectInput(ns("typeSelect"), "Type of selection",
-                  choices=c("None" = "None",
-                            "Protein list" = "ProteinList",
-                            "Random" = "Random",
-                            "Specific column" = "Column"),
-                  selected = params()$typeSelect,
-                  width=('130px'))
-    })
 
 
-    output$listSelect_UI <- renderUI({
-      selectInput(ns("listSelect"),
-                  "Protein for normalization",
-                  choices = SummarizedExperiment::rowData(obj())[[keyId()]],
-                  selected = params()$listSelect,
-                  multiple = TRUE,
-                  width='400px'
-      )
-    })
 
 
-    output$randomSelect_UI <- renderUI({
-      textInput(ns("randSelect"),
-                "Random",
-                value = params()$randSelect,
-                width = ('120px'))
-    })
+    # output$selectType_UI <- renderUI({
+    #   selectInput(ns("typeSelect"), "Type of selection",
+    #               choices=c("None" = "None",
+    #                         "Protein list" = "ProteinList",
+    #                         "Random" = "Random",
+    #                         "Specific column" = "Column"),
+    #               selected = params()$typeSelect,
+    #               width=('130px'))
+    # })
 
-    output$columnSelect_UI <- renderUI({
-      selectInput(ns("colSelect"),
-                  "Column",
-                  choices = colnames(SummarizedExperiment::rowData(obj())),
-                  selected = params()$colSelect
-                  )
-    })
+
+    # output$listSelect_UI <- renderUI({
+    #   selectInput(ns("listSelect"),
+    #               "Protein for normalization",
+    #               choices = SummarizedExperiment::rowData(obj())[[keyId()]],
+    #               selected = params()$listSelect,
+    #               multiple = TRUE,
+    #               width='400px'
+    #   )
+    # })
+    #
+    #
+    # output$randomSelect_UI <- renderUI({
+    #   textInput(ns("randSelect"),
+    #             "Random",
+    #             value = params()$randSelect,
+    #             width = ('120px'))
+    # })
+    #
+    # output$columnSelect_UI <- renderUI({
+    #   selectInput(ns("colSelect"),
+    #               "Column",
+    #               choices = colnames(SummarizedExperiment::rowData(obj())),
+    #               selected = params()$colSelect
+    #               )
+    # })
 
 
 
@@ -168,24 +234,7 @@ mod_plots_tracking_server <- function(id,
 
 
 
-    observeEvent(req(input$typeSelect),{
 
-      rv.track$res <- list(typeSelect = if (is.null(input$typeSelect)) 'None' else input$typeSelect,
-                           listSelect = NULL,
-                           randSelect = '',
-                           colSelect = NULL,
-                           list.indices = NULL,
-                           rand.indices = '',
-                           col.indices = NULL)
-
-      updateSelectInput(session, "listSelect", selected = NULL)
-      updateSelectInput(session, "randSelect", selected = '')
-      updateSelectInput(session, "colSelect", selected = NULL)
-
-      shinyjs::toggle("listSelect_UI", condition = input$typeSelect=="ProteinList")
-      shinyjs::toggle("randomSelect_UI", condition = input$typeSelect=="Random")
-      shinyjs::toggle("columnSelect_UI", condition = input$typeSelect=="Column")
-    })
 
 
 
@@ -222,6 +271,7 @@ mod_plots_tracking_server <- function(id,
     })
 
     observeEvent(input$colSelect, ignoreNULL = FALSE,{
+      req(obj())
       rv.track$res$colSelect <- input$colSelect
 
       updateSelectInput(session, "listSelect", NULL)
