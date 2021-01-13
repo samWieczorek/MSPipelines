@@ -295,6 +295,7 @@ observeEvent(req(self$rv$temp.dataIn), {
         shinyjs::toggle("perform.normalization", condition = input$method != "None")
         shinyjs::toggle("spanLOESS", condition = input$method == "LOESS")
         shinyjs::toggle("varReduction", condition = input$method == "MeanCentering")
+        shinyjs::toggle("Div_quantile_widget", condition = input$method == "QuantileCentering")
 
         shinyjs::toggle("type",
                         condition=( input$method %in% c(DAPAR2::normalizeMethods.dapar()[-which(DAPAR2::normalizeMethods.dapar()=="GlobalQuantileAlignment")])))
@@ -460,8 +461,16 @@ observeEvent(req(self$rv$temp.dataIn), {
         req(self$rv$dataIn)
         Get_Selected_Proteins_For_Plots()
 
-        hc <- DAPAR2::compareNormalizationD_HC(qDataBefore = assay(self$rv$temp.dataIn, length(self$rv$temp.dataIn)),
-                                               qDataAfter = assay(self$rv$dataIn, length(self$rv$dataIn)),
+        qBefore <- qAfter <- NULL
+        if (self$rv$datasetExists){
+          qBefore <- assay(self$rv$temp.dataIn, length(self$rv$temp.dataIn)-1)
+          qAfter <-assay(self$rv$dataIn, length(self$rv$dataIn))
+        } else{
+          qBefore <- assay(self$rv$temp.dataIn, length(self$rv$temp.dataIn))
+          qAfter <- assay(self$rv$dataIn, length(self$rv$dataIn))
+        }
+        hc <- DAPAR2::compareNormalizationD_HC(qDataBefore = qBefore,
+                                               qDataAfter = qAfter,
                                                conds= MultiAssayExperiment::colData(self$rv$dataIn)$Condition,
                                                palette = DAPAR2::Base_Palette(conditions = colData(self$rv$dataIn)$Condition),
                                                subset.view = Get_Selected_Proteins_For_Plots(),
@@ -495,16 +504,19 @@ Normalize_ui = function(){
                                        max = 1,
                                        width='100px')),
 
-          mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
-          numericInput(self$ns("quantile"), NULL,
+          shinyjs::hidden(
+            div(id = self$ns('Div_quantile_widget'),
+                mod_popover_for_help_ui(self$ns("modulePopover_normQuanti")),
+                numericInput(self$ns("quantile"), NULL,
                                 value = 0.15,
                                 min = 0,
                                 max = 1,
-                                width='150px'),
-         # uiOutput(self$ns("choose_normalizationQuantile")),
-         # uiOutput(self$ns("choose_normalizationScaling"))
-         checkboxInput(self$ns("varReduction"), "Include variance reduction",
+                                width='150px')
+                          )
+            ),
+         shinyjs::hidden(checkboxInput(self$ns("varReduction"), "Include variance reduction",
                        value = FALSE)
+         )
         ),
         div(
           style="display:inline-block; vertical-align: middle; padding-right: 20px;",
