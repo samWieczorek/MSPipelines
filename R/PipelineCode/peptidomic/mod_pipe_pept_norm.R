@@ -4,9 +4,9 @@
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
-#' @noRd 
+#' @noRd
 #'
-#' @importFrom shiny NS tagList 
+#' @importFrom shiny NS tagList
 mod_pipe_pept_norm_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -17,21 +17,21 @@ mod_pipe_pept_norm_ui <- function(id){
 #' pipe_pept_norm Server Function
 #'
 #' @noRd
-#' 
+#'
 #' @param input,output,session
-#' 
+#'
 #' @param obj
-#' 
+#'
 #' @param samplesTab
-#' 
+#'
 #' @importFrom DAPAR2 normalizeD
 #' @importFrom SummarizedExperiment rowData
-#' 
+#'
 mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
   ns <- session$ns
-  
-  
-  
+
+
+
   # Variable to manage the different screens of the module
   r.nav <- reactiveValues(
     name = "Normalization",
@@ -43,7 +43,7 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
     mandatory =  rep(TRUE,2),
     reset = FALSE
   )
-  
+
   ## reactive values for variables in the module
   rv.norm <- reactiveValues(
     name = "processPeptNorm",
@@ -58,12 +58,12 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
                    quantile = 0.15,
                    spanLOESS = 0.7),
     trackFromBoxplot = NULL,
-    selectProt = NULL, 
+    selectProt = NULL,
     resetTracking = FALSE,
     sync = FALSE
   )
-  
-  
+
+
   observeEvent(req(r.nav$reset),{
     ## update widgets whose names are in r.widgets with the value in this list
     ## This part must be before the reinitialization of r.nav$isDone
@@ -73,35 +73,35 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
     # updateRadioButtons(session, "typeOfData", selected=NULL)
     # updateRadioButtons(session, "checkDataLogged", selected=NULL)
     # updateCheckboxInput(session,"replaceAllZeros", value=NULL)
-    
-    
+
+
     rv.norm$widgets$method <- "None"
     rv.norm$widgets$type <- "None"
     rv.norm$widgets$varReduction <- FALSE
     rv.norm$widgets$quantile <- 0.15
     rv.norm$widgets$spanLOESS <- 0.7
     rv.norm$resetTracking <- TRUE
-    
+
     rv.norm$sync <- FALSE
-    
+
     rv.norm$dataIn <- obj()
     rv.norm$i <- ind()
-    
+
     ## do not modify this part
     r.nav$isDone <- rep(FALSE, 2)
     r.nav$reset <- FALSE
     ## end of no modifiable part
   })
-  
-  
+
+
   callModule(mod_navigation_server, 'nav_pipe_pept_norm', style=2, pages=r.nav)
-  
+
   #### END of template part of the module
-  
-  
-  
+
+
+
   ##
-  ##  
+  ##
   ## Calls to other modules
   ##
   ##
@@ -111,28 +111,28 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
              conds = reactive({colData(rv.norm$dataIn)[["Condition"]]}),
              legend = reactive({colData(rv.norm$dataIn)[["Sample.name"]]}),
              base_palette = reactive({rv.norm$settings()$basePalette}))
-  
- 
+
+
   callModule(mod_popover_for_help_server,
-             "modulePopover_normQuanti", 
-             data = list(title = HTML(paste0("<strong>Normalization quantile</strong>")), 
+             "modulePopover_normQuanti",
+             data = list(title = HTML(paste0("<strong>Normalization quantile</strong>")),
                          content="lower limit/noise (quantile = 0.15), median (quantile = 0.5). Min value=0, max value=1")
   )
-  
-  rv.norm$selectProt <- callModule(mod_plots_tracking_server, 
-                                   "master_ProtSelection", 
+
+  rv.norm$selectProt <- callModule(mod_plots_tracking_server,
+                                   "master_ProtSelection",
                                    obj = reactive({rv.norm$dataIn[[rv.norm$i]]}),
                                    params = reactive({NULL}),
                                    keyId = reactive({MultiAssayExperiment::metadata(obj())[['keyId']]}),
                                    reset = reactive({rv.norm$resetTracking}),
                                    slave = reactive({FALSE})
   )
-  
+
   rv.norm$settings <- callModule(mod_settings_server,
-                                 "settings", 
+                                 "settings",
                                  obj = reactive({obj()}))
-  
-  
+
+
   rv.norm$trackFromBoxplot <- callModule(mod_plots_intensity_server,
                                          "boxPlot_Norm",
                                          dataIn = reactive({rv.norm$dataIn[[rv.norm$i]]}),
@@ -148,21 +148,21 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
                                          reset = reactive({rv.norm$resetTracking}),
                                          slave = reactive({rv.norm$sync})
   )
-  
-  
+
+
   ##
   ## Definitions of the screens
   ##
-  
-  
+
+
   observe({
     ## instanciation of the RV in the module with parameters
     req(obj())
     rv.norm$dataIn <- obj()
     rv.norm$i <- ind()
   })
-  
-  
+
+
   ###---------------------------------------------------------------------------------###
   ###                                 Screen 1                                        ###
   ###---------------------------------------------------------------------------------###
@@ -172,15 +172,15 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
         div(
           div(
             style="display:inline-block; vertical-align: middle; padding-right: 20px;",
-            selectInput(ns("normalization.method"),"Normalization method", 
-                        choices = DAPAR2::normalizeMethods.dapar(), 
+            selectInput(ns("normalization.method"),"Normalization method",
+                        choices = DAPAR2::normalizeMethods.dapar(),
                         selected = rv.norm$widgets$method,
                         width='200px')
           ),
           div(
             style="display:inline-block; vertical-align: middle; padding-right: 20px;",
-            hidden(selectInput(ns("normalization.type"), "Normalization type",  
-                               choices = c("overall", "within conditions"), 
+            hidden(selectInput(ns("normalization.type"), "Normalization type",
+                               choices = c("overall", "within conditions"),
                                selected = rv.norm$widgets$type,
                                width='150px'))
           ),
@@ -210,11 +210,11 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
         )
       )
     })
-    
+
   })
-  
-  
-  
+
+
+
   observeEvent(input$normalization.method, ignoreInit=TRUE,{
     rv.norm$widgets$method <- input$normalization.method
   })
@@ -230,117 +230,117 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
   observeEvent(input$spanLOESS, ignoreInit=TRUE,{
     rv.norm$widgets$spanLOESS <- input$spanLOESS
   })
-  
+
   observeEvent(input$SyncForNorm, {
     rv.norm$sync <- input$SyncForNorm
   })
-  
-  
+
+
   output$test_spanLOESS <- renderUI({
     req(rv.norm$widgets$spanLOESS)
     if (!is.numeric(rv.norm$widgets$spanLOESS)){
       tags$p("Please choose a number.")
     }
   })
-  
-  
+
+
   output$test_normQuant <- renderUI({
     req(rv.norm$widgets$quantile)
     if (!is.numeric(rv.norm$widgets$quantile)){
       tags$p("Please choose a number.")
     }
   })
-  
+
   output$helpForNormalizationMethods <- renderUI({
     req(rv.norm$widgets$method)
     if (rv.norm$widgets$method == "None") {return(NULL)}
-    
-    
+
+
     switch(rv.norm$widgets$method,
            GlobalQuantileAlignment= txt <- "This method proposes a normalization of important
-         magnitude that should be cautiously used. It proposes to align the quantiles of all 
-         the replicates as described in [Other ref. 1]; practically it amounts to replace 
+         magnitude that should be cautiously used. It proposes to align the quantiles of all
+         the replicates as described in [Other ref. 1]; practically it amounts to replace
          abundances by order statistics.",
-           QuantileCentering = txt <- "These methods propose to shift the sample distributions 
-         (either all of them at once, or within each condition at a time) to align a specific 
-         quantile: the median (under the assumption that up-regulations and down-regulations 
-         are equally frequent), the 15% quantile (under the assumption that the signal/noise ratio is 
+           QuantileCentering = txt <- "These methods propose to shift the sample distributions
+         (either all of them at once, or within each condition at a time) to align a specific
+         quantile: the median (under the assumption that up-regulations and down-regulations
+         are equally frequent), the 15% quantile (under the assumption that the signal/noise ratio is
          roughly the same in all the samples), or any other user's choice.",
-           MeanCentering = txt <- "These methods propose to shift the sample distributions (either all 
-         of them at once, or within each condition at a time) to align their means. It is also possible 
+           MeanCentering = txt <- "These methods propose to shift the sample distributions (either all
+         of them at once, or within each condition at a time) to align their means. It is also possible
          to force unit variance (or not).",
            SumByColumns = txt <- "These methods propose normalizations of important magnitude that should be cautiously used.
-         It operates on the original scale (not the log2 one) and propose to normalize each abundance by the 
+         It operates on the original scale (not the log2 one) and propose to normalize each abundance by the
          total abundance of the sample (so as to focus on the analyte proportions among each sample).",
-           LOESS = txt <- "This method proposes to apply a cyclic LOESS [Other ref. 4, 5] normalization to the data 
-         (either all of them at once, or on each condition independently). It relates to  a 
+           LOESS = txt <- "This method proposes to apply a cyclic LOESS [Other ref. 4, 5] normalization to the data
+         (either all of them at once, or on each condition independently). It relates to  a
          combination of multiple regression models. The user can tune the regression span (an higher span smooths
          the fit more, while a lower span captures more trends).",
-           vsn = txt <- "This method proposes to apply the Variance Stabilization Normalization [Other ref. 6] to the 
+           vsn = txt <- "This method proposes to apply the Variance Stabilization Normalization [Other ref. 6] to the
          data (either all of them at once, or on each condition independently). No specific parameters required."
     )
-    
+
     tags$p(txt)
   })
-  
-  
-  
-  
+
+
+
+
   output$choose_normalizationQuantile <- renderUI({
     req(rv.norm$widgets$method)
     if (rv.norm$widgets$method != "QuantileCentering") { return (NULL)}
-    
+
     tagList(
       mod_popover_for_help_ui(ns("modulePopover_normQuanti")),
       textInput(ns("normalization.quantile"), NULL,
                 value = rv.norm$widgets$quantile,width='150px'),
       uiOutput(ns("test_normQuant"))
     )
-    
+
   })
-  
-  
-  
-  
-  
+
+
+
+
+
   output$choose_normalizationScaling <- renderUI({
     req(rv.norm$widgets$method)
-    
+
     if (rv.norm$widgets$method == "MeanCentering"){
       # check if the normalisation has already been performed
-      
-      checkboxInput(ns("normalization.variance.reduction"), 
-                    "Include variance reduction",  
+
+      checkboxInput(ns("normalization.variance.reduction"),
+                    "Include variance reduction",
                     value = rv.norm$widgets$varReduction)
     }
-    
+
   })
-  
-  
+
+
   observeEvent(rv.norm$widgets$method,{
     req(obj())
     if (rv.norm$widgets$method == "None"){
       rv.norm$dataIn <- obj()
       #rv.norm$resetTracking <- TRUE
     }
-    
+
     shinyjs::toggle("perform.normalization", condition = rv.norm$widgets$method != "None")
     shinyjs::toggle("spanLOESS", condition = rv.norm$widgets$method == "LOESS")
-    
-    shinyjs::toggle("normalization.type", 
+
+    shinyjs::toggle("normalization.type",
                     condition=( rv.norm$widgets$method %in% c(DAPAR2::normalizeMethods.dapar()[-which(DAPAR2::normalizeMethods.dapar()=="GlobalQuantileAlignment")])))
-    
+
     cond <- MultiAssayExperiment::metadata(rv.norm$dataIn[[rv.norm$i]])$typeOfData == 'peptide'
     trackAvailable <- rv.norm$widgets$method %in% normalizeMethodsWithTracking.dapar()
     shinyjs::toggle('DivMasterProtSelection', condition= cond && trackAvailable)
     shinyjs::toggle('SyncForNorm', condition= cond && trackAvailable)
   })
-  
-  
+
+
   GetIndicesOfSelectedProteins <- reactive({
     req(rv.norm$trackFromBoxplot())
-    
-    
+
+
     print('in GetIndicesOfSelectedProteins')
     print(rv.norm$trackFromBoxplot())
     ind <- NULL
@@ -353,29 +353,31 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
     )
     if (length(ind)==0)
       ind <- NULL
-    
+
     print('ind = ')
     print(ind)
     ind
   })
-  
-  
-  
-  ##' Reactive behavior : Normalization of data
-  ##' @author Samuel Wieczorek
+
+
+
+  #' @title
+  #' Reactive behavior : Normalization of data
+  #'
+  #' @author Samuel Wieczorek
   observeEvent(input$perform.normalization,{
     rv.norm$widgets$method
     rv.norm$dataIn
     # isolate({
     conds <- colData(rv.norm$dataIn)$Condition
-    
+
     ## the dataset whihc will be normalized is always the original one
     rv.norm$dataIn <- obj()
     rv.norm$i <- ind()
-    
-    switch(rv.norm$widgets$method, 
+
+    switch(rv.norm$widgets$method,
            None = rv.norm$dataIn <- obj(),
-           
+
            GlobalQuantileAlignment = {
              rv.norm$dataIn <- DAPAR2::normalizeD(object = rv.norm$dataIn,
                                           i = rv.norm$i,
@@ -383,83 +385,83 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
                                           method='GlobalQuantileAlignment'
              )
            },
-           
+
            QuantileCentering = {
              quant <-NA
              if (!is.null(rv.norm$widgets$quantile))
                quant <- as.numeric(rv.norm$widgets$quantile)
-             
-             rv.norm$dataIn <- DAPAR2::normalizeD(object = rv.norm$dataIn, 
-                                          i = rv.norm$i, 
+
+             rv.norm$dataIn <- DAPAR2::normalizeD(object = rv.norm$dataIn,
+                                          i = rv.norm$i,
                                           name = "peptides_norm",
-                                          method = 'QuantileCentering', 
-                                          conds = conds, 
+                                          method = 'QuantileCentering',
+                                          conds = conds,
                                           type = rv.norm$widgets$type,
-                                          #subset.norm = GetIndicesOfSelectedPeptide(), 
+                                          #subset.norm = GetIndicesOfSelectedPeptide(),
                                           quantile = quant
              )
-             
+
            } ,
-           
+
            MeanCentering = {
              rv.norm$dataIn <- DAPAR2::normalizeD(object =rv.norm$dataIn,
-                                          i = rv.norm$i, 
+                                          i = rv.norm$i,
                                           name ="peptides_norm",
-                                          method = 'MeanCentering', 
-                                          conds = conds, 
+                                          method = 'MeanCentering',
+                                          conds = conds,
                                           type = rv.norm$widgets$type,
-                                          #subset.norm = GetIndicesOfSelectedPeptide(), 
+                                          #subset.norm = GetIndicesOfSelectedPeptide(),
                                           scaling = rv.norm$widgets$varReduction
              )
-           }, 
-           
+           },
+
            SumByColumns = {
              rv.norm$dataIn <- DAPAR2::normalizeD(object = rv.norm$dataIn,
                                           i = rv.norm$i,
                                           name = "peptides_norm",
-                                          method = 'SumByColumns', 
-                                          conds = conds, 
+                                          method = 'SumByColumns',
+                                          conds = conds,
                                           type = rv.norm$widgets$type#,
                                           #subset.norm = GetIndicesOfSelectedPeptide()
              )
            },
-           
-           LOESS = { 
+
+           LOESS = {
              rv.norm$dataIn <- DAPAR2::normalizeD(object = rv.norm$dataIn,
                                           i = rv.norm$i,
                                           name = "peptides_norm",
-                                          method = 'LOESS', 
-                                          conds = conds, 
+                                          method = 'LOESS',
+                                          conds = conds,
                                           type = rv.norm$widgets$type,
                                           span = as.numeric(rv.norm$widgets$spanLOESS)
              )
            },
-           
+
            vsn = {
              rv.norm$dataIn <- DAPAR2::normalizeD(object = rv.norm$dataIn,
-                                          i = rv.norm$i, 
+                                          i = rv.norm$i,
                                           name = "peptides_norm",
-                                          method = 'vsn', 
-                                          conds = conds, 
+                                          method = 'vsn',
+                                          conds = conds,
                                           type = rv.norm$widgets$type)
            }
     )
     # })
-    
+
     rv.norm$i <- ind() + 1
     r.nav$isDone[1] <- TRUE
     #shinyjs::hide("perform.normalization")
   })
-  
-  
-  
-  
+
+
+
+
   #######################
   output$viewComparisonNorm_UI <- renderHighchart({
     rv.norm$settings()$basePalette
     req(rv.norm$dataIn)
     obj()
-    
+
     hc <- DAPAR2::compareNormalizationD_HC(qDataBefore = assay(obj()[[ind()]]),
                                            qDataAfter = assay(rv.norm$dataIn[[rv.norm$i]]),
                                            conds= colData(obj())$Condition,
@@ -468,30 +470,30 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
                                            n = 50)
     hc
   })
-  
-  
-  
-  
+
+
+
+
   ###---------------------------------------------------------------------------------###
   ###                                 Screen 2                                        ###
   ###---------------------------------------------------------------------------------###
-  
+
   output$Screen_Pept_norm_2 <- renderUI({
     print('screen 2')
     tagList(
       actionButton(ns("valid.normalization"),
-                   "Save normalization", 
-                   class = actionBtnClass, 
+                   "Save normalization",
+                   class = actionBtnClass,
                    width="170px")
     )
-    
+
   })
-  
-  
+
+
   ##' -- Validate and save the normalization ---------------------------------------
   ##' @author Samuel Wieczorek
   observeEvent(input$valid.normalization,{
-    
+
     if (rv.norm$widgets$method != "None") {
       MultiAssayExperiment::metadata(rv.norm$dataIn[[rv.norm$i]])$Params <- list(
         method = rv.norm$widgets$method,
@@ -500,16 +502,16 @@ mod_pipe_pept_norm_server <- function(input, output, session, obj, ind){
         quantile = rv.norm$widgets$quantile,
         spanLOESS =rv.norm$widgets$spanLOESS
       )
-      
+
       rv.norm$dataOut <- rv.norm$dataIn
       r.nav$isDone[2] <- TRUE
       # UpdateDatasetWidget(rv$current.obj, name)
     }
-    
+
   })
-  
+
   return({reactive(rv.norm$dataOut)})
-  
+
 }
 
 ## To be copied in the UI

@@ -7,7 +7,14 @@
 \usage{
 mod_plots_tracking_ui(id)
 
-mod_plots_tracking_server(id, obj, keyId, params, reset = FALSE, slave = FALSE)
+mod_plots_tracking_server(
+  id,
+  obj,
+  keyId,
+  params = NULL,
+  reset = FALSE,
+  slave = reactive({     FALSE })
+)
 }
 \arguments{
 \item{id}{shiny id}

@@ -340,8 +340,10 @@ observeEvent(req(self$rv$temp.dataIn), {
         ind
       })
 
-      ##' Reactive behavior : Normalization of data
-      ##' @author Samuel Wieczorek
+      #' @title
+      #' Reactive behavior : Normalization of data
+      #'
+      #' @author Samuel Wieczorek
       observeEvent(input$perform.normalization, ignoreInit = TRUE, {
         input$method
         self$rv$dataIn

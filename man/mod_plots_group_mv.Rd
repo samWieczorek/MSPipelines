@@ -10,7 +10,13 @@ mod_plots_group_mv_ui(id)
 mod_plots_group_mv_server(id, obj, conds, base_palette)
 }
 \arguments{
-\item{id}{shiny id}
+\item{id}{xxx}
+
+\item{obj}{xxx}
+
+\item{conds}{xxx}
+
+\item{base_palette}{xxx}
 
 \item{input}{internal}
 
