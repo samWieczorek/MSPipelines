@@ -15,9 +15,14 @@ Protein = R6::R6Class(
 
   private = list(
 
+    # .config = list(name = 'Protein',
+    #                steps = c('Description', 'Filtering', 'Normalization', 'Imputation', 'HypothesisTest'),
+    #                mandatory = c(T, F, F, F, F)
+    # )
+
     .config = list(name = 'Protein',
-                   steps = c('Description', 'Filtering', 'Normalization', 'Imputation', 'HypothesisTest'),
-                   mandatory = c(T, F, F, F, F)
+                   steps = c('Description', 'Normalization'),
+                   mandatory = c(T, F)
     )
   ),
 

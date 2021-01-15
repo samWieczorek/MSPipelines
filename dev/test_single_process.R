@@ -13,13 +13,15 @@ source(file.path("../R", "mod_popover_for_help.R"), local = TRUE)$value
 source(file.path("../R", "mod_format_DT.R"), local = TRUE)$value
 source(file.path("../R", "Protein_Normalization.R"), local = TRUE)$value
 
-source(file.path('.', 'Example_ProcessA.R'), local=TRUE)$value
-source(file.path('.', 'Example_ProcessB.R'), local=TRUE)$value
-source(file.path('.', 'Example_Description.R'), local=TRUE)$value
+# source(file.path('.', 'Example_ProcessA.R'), local=TRUE)$value
+# source(file.path('.', 'Example_ProcessB.R'), local=TRUE)$value
+# source(file.path('.', 'Example_Description.R'), local=TRUE)$value
 
 
 rv <- reactiveValues()
+
 process <- Protein_Normalization$new('Norm')
+
 ui = fluidPage(
   tagList(
     actionButton('send', 'Send dataset'),
@@ -38,9 +40,10 @@ server = function(session, input, output){
   rv <- reactiveValues(
     res = NULL
   )
-  rv$res <- process$server(dataIn = reactive({rv$dataIn}))
   utils::data(Exp1_R25_prot, package='DAPARdata2')
 
+  #rv$res <- process$server(dataIn = reactive({rv$dataIn}))
+  rv$res <- process$server(dataIn = reactive({Exp1_R25_prot}))
 
   observe({
     req(rv$res()$value)

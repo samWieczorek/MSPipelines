@@ -20,7 +20,7 @@ Protein_Normalization = R6::R6Class(
 
   public = list(
 
-    Global_server = function(session, input, output){
+    Global_server = function(session, input){
 
       self$rv$trackFromBoxplot = NULL
       self$rv$selectProt = NULL
