@@ -86,7 +86,7 @@ Protein_Imputation = R6::R6Class(
                                          factor = reactive({self$rv.impute$widgets$MEC_detQuant_factor}))
       },
 
-    Description_server = function(input, output){
+    Description_server = function(session, input){
       observeEvent(input$btn_validate_Description, ignoreInit = T, ignoreNULL=T, {
         cat(paste0(class(self)[1], "::observeEvent(input$btn_validate_Description from - ", self$id, '\n'))
         private$InitializeDataIn()
@@ -115,7 +115,7 @@ Protein_Imputation = R6::R6Class(
 
     ############### SCREEN 2 ######################################
 
-    Step1_server = function(input, output){
+    Step1_server = function(session, input, output){
 
 
       output$Screen_Impute_1 <- renderUI({
@@ -306,7 +306,7 @@ Protein_Imputation = R6::R6Class(
 
 
     # Screen 3
-    Step2_server = function(input, output){
+    Step2_server = function(session, input, output){
       ## Logics to implement: here, we must take the last data not null
       # in previous datas. The objective is to take account
       # of skipped steps
@@ -478,7 +478,7 @@ Protein_Imputation = R6::R6Class(
 
     Step2_ui = function(){uiOutput(self$ns('Screen_Impute_2'))},
 
-    Step3_server = function(input, output){
+    Step3_server = function(session, input, output){
 
       observeEvent(input$btn_validate_Step3, ignoreInit = T, {
         ind <- grep('_impute', names(rv.impute$dataIn))

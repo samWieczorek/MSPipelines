@@ -15,6 +15,8 @@ Protein_Normalization = R6::R6Class(
                    steps = c('Description', 'Normalize', 'Save'),
                    mandatory = c(T, F, T)
     ),
+
+    #' @field new.name For internal usage
     new.name = 'proteins_norm'
   ),
 
@@ -114,7 +116,7 @@ observeEvent(req(self$rv$temp.dataIn), {
     #
     ############################### Description screen ######################################
     #
-    Description_server = function(input, output){
+    Description_server = function(session, input, output){
 
       observeEvent(input$btn_validate_Description, ignoreInit = T, ignoreNULL=T, {
         cat(paste0(class(self)[1], "::observeEvent(input$btn_validate_Description from - ", self$id, '\n'))
@@ -148,7 +150,7 @@ observeEvent(req(self$rv$temp.dataIn), {
 
     ############### SCREEN 2 ######################################
 
-    Normalize_server = function(input, output){
+    Normalize_server = function(session, input, output){
 
       # output$Screen_Prot_norm_1 <- renderUI({
       #   isolate({
@@ -557,7 +559,7 @@ Normalize_ui = function(){
 
 
     ########################### SCREEN STEP 2 ###################################
-    Save_server = function(input, output){
+    Save_server = function(session, input, output){
 
     #   mod_format_DT_server('show_params',
     #                        table2show = reactive({

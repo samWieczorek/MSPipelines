@@ -33,7 +33,7 @@ Protein_HypothesisTest = R6::R6Class(
     ),
 
 
-    Global_server = function(input, output){},
+    Global_server = function(session, input){},
 
     Description_server = function(input, output){
       observeEvent(input$btn_validate_Description, ignoreInit = T, ignoreNULL=T, {
@@ -65,7 +65,7 @@ Protein_HypothesisTest = R6::R6Class(
 
     ############### SCREEN 2 ######################################
 
-    Step1_server = function(input, output){
+    Step1_server = function(session, input, output){
 
       output$Screen_Prot_hypotest_1 <- renderUI({
 
@@ -226,7 +226,7 @@ Protein_HypothesisTest = R6::R6Class(
     Step1_ui = function(){uiOutput(self$ns('Screen_Prot_hypotest_1'))},
 
 
-    Step2_server = function(input, output){
+    Step2_server = function(session, input, output){
 
       output$btn_valid <- renderUI({
 

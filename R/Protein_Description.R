@@ -16,10 +16,10 @@ Protein_Description = R6::R6Class(
 
   public = list(
 
-    Global_server = function(input, output){},
+    Global_server = function(session, input){},
 
 
-    Description_server = function(input, output){
+    Description_server = function(session, input, output){
       observeEvent(input$btn_validate_Description, ignoreInit = T, ignoreNULL=T, {
         cat(paste0(class(self)[1], "::observeEvent(input$btn_validate_Description from - ", self$id, '\n'))
         private$InitializeDataIn()

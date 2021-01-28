@@ -63,7 +63,7 @@ Protein_Filtering = R6::R6Class(
 
 
 
-    Global_server = function(input, output){
+    Global_server = function(session, input){
       cat(paste0(class(self)[1], "::Global_server() from - ", self$id, '\n'))
 
       mod_plots_group_mv_server("MVPlots_filtering",
@@ -91,7 +91,7 @@ Protein_Filtering = R6::R6Class(
       )
     },
     #---------------------------------------------------------------------------
-    Description_server = function(input, output){
+    Description_server = function(session, input, output){
 
       observeEvent(input$btn_validate_Description, ignoreInit = T, ignoreNULL=T, {
         cat(paste0(class(self)[1], "::observeEvent(input$btn_validate_Description from - ", self$id, '\n'))
@@ -116,7 +116,7 @@ Protein_Filtering = R6::R6Class(
     },
 
   #---------------------------------------------------------------------------
-    MV_Filtering_server = function(input, output){
+    MV_Filtering_server = function(session, input, output){
 
 
       output$MV_Filtering <- renderUI({
@@ -290,7 +290,7 @@ Protein_Filtering = R6::R6Class(
 
     Field_Filtering_ui = function(){ uiOutput(self$ns('Field_Filtering'))},
 #---------------------------------------------------------------------------
-    Field_Filtering_server = function(input, output){
+    Field_Filtering_server = function(session, input, output){
 
 
       output$Field_Filtering <- renderUI({
@@ -488,7 +488,7 @@ Protein_Filtering = R6::R6Class(
 
     Validate_ui = function(){uiOutput(self$ns('Validate'))},
 #---------------------------------------------------------------------------
-    Validate_server = function(input, output){
+    Validate_server = function(session, input, output){
 
       output$Validate <- renderUI({
         tagList(
