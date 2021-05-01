@@ -13,15 +13,10 @@ Imports:
     Magellan (>= 0.2),
     QFeatures (>= 1.1.1)
 Collate:
-    Protein.R
-    P2p.R
-    Peptide.R
-    Peptidomic.R
-    Protein_Description.R
-    Protein_Filtering.R
-    Protein_HypothesisTest.R
-    Protein_Imputation.R
-    Protein_Normalization.R
+    mod_Protein.R
+    mod_Protein_Normalization.R
+    mod_Protein_Filtering.R
+    mod_Protein_Description.R
     global.R
     zzz.R
     mod_all_plots.R
