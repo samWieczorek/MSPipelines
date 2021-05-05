@@ -2,15 +2,9 @@
 mod_AddStep_ui <- function(id){
   ns <- NS(id)
   tagList(
-    wellPanel(
-      fluidRow(
-      column(3, textInput(ns('name'),'Step name')),
-      column(3, selectInput(ns('isMandatory'),'Mandatory', choices = c(T, F), width = '100px')),
-      column(3, selectInput(ns('members'), "Nb widgets", choices = 0:5, width = '100px'))
-    ),
-    uiOutput(ns('ll_widgets_ui'))
-  )
-  )
+    shinyjs::useShinyjs(),
+    uiOutput(ns('form_ui'))
+)
 }
 
 
@@ -39,7 +33,7 @@ mod_AddStep_ui <- function(id){
 #'
 #' @import shiny
 #'
-mod_AddStep_server <- function(id){
+mod_AddStep_server <- function(id, n, nTotal){
 
   #' @field global xxxx
   rv <- reactiveValues(
@@ -54,6 +48,40 @@ mod_AddStep_server <- function(id){
   ###-------------------------------------------------------------###
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    output$form_ui <- renderUI({
+
+      if (n() == nTotal()){
+          wellPanel(style="background-color: lightblue",
+          fluidRow(
+            column(3, shinyjs::disabled(textInput(ns('name'),'Step name', value = 'Save'))),
+            column(3, shinyjs::disabled(selectInput(ns('isMandatory'),'Mandatory', choices = c(T), width = '100px'))),
+            column(3, selectInput(ns('members'), "Nb widgets", choices = 0:5, width = '100px'))
+          ),
+          uiOutput(ns('ll_widgets_ui')))
+      } else if (n() == 1){
+        wellPanel(style="background-color: lightblue",
+                  fluidRow(
+          column(3, shinyjs::disabled(textInput(ns('name'),'Step name', value = 'Description'))),
+          column(3, shinyjs::disabled(selectInput(ns('isMandatory'),'Mandatory', choices = c(T), width = '100px'))),
+          column(3, shinyjs::disabled(selectInput(ns('members'), "Nb widgets", choices = 0, width = '100px')))
+        ),
+        uiOutput(ns('ll_widgets_ui')))
+      } else {
+        wellPanel(style="background-color: lightgrey",
+                  fluidRow(
+          column(3, textInput(ns('name'),'Step name')),
+          column(3, selectInput(ns('isMandatory'),'Mandatory', choices = c(T, F), width = '100px')),
+          column(3, selectInput(ns('members'), "Nb widgets", choices = 0:5, width = '100px'))
+        ),
+        uiOutput(ns('ll_widgets_ui')))
+        }
+
+
+
+    })
+
+
 
 
     output$ll_widgets_ui <- renderUI({
@@ -72,6 +100,7 @@ mod_AddStep_server <- function(id){
     })
 
     Get_Value <- function(item){
+      #browser()
       members <- as.integer(input$members)
       if(members == 0)
         ll <- NULL
@@ -91,7 +120,7 @@ mod_AddStep_server <- function(id){
          isMandatory = reactive({as.logical(input$isMandatory)}),
          widgets.type = reactive({Get_Value('type')}),
          widgets.renderUI = reactive({as.logical(Get_Value('renderUI'))}),
-         widgets.name = reactive({lapply(1:length(Get_Value('name')), function(x){paste0(input$name,'_',  Get_Value('name')[[x]])}) }),
+         widgets.name = reactive({if (length(Get_Value('name')) > 0) lapply(1:length(Get_Value('name')), function(x){paste0(input$name,'_',  Get_Value('name')[[x]])}) else NULL }),
          widgets.defaultVal = reactive({Get_Value('defaultVal')})
     )
 

@@ -1,20 +1,4 @@
 
-#' proc1 UI Function
-#'
-#' @description A shiny Module.
-#'
-#' @param id, input, output, session  #Internal parameters for {shiny}.
-#'
-#' @noRd
-#'
-#' @importFrom shiny NS tagList
-#' @import shinyjs
-#' @importFrom shinyalert useShinyalert
-#'
-mod_proc1_ui <- function(id){
-  ns <- NS(id)
-}
-
 #' proc1 Server Function
 #'
 #' @noRd
@@ -37,10 +21,8 @@ mod_proc1_server <- function(id,
   )
 # Define default selected values for widgets
 widgets.default.values <- list(
-step1_a = a,
-step1_b = b,
-step2_c = c,
-step2_d = d
+Step1_a = a,
+Step1_b = b
 )
 
 
@@ -69,33 +51,18 @@ step2_d = d
     )
 
 config <- list(
-    name = proc1,
-    steps = c('step1','step2'),
-    mandatory = c(TRUE,TRUE)
+    name = 'proc1',
+    steps = c('Description','Step1','Save'),
+    mandatory = c(TRUE,TRUE,TRUE)
   )
 rv.widgets <- reactiveValues(
-step1_a =  widgets.default.values$step1_a,
-step1_b =  widgets.default.values$step1_b,
-step2_c =  widgets.default.values$step2_c,
-step2_d =  widgets.default.values$step2_d
+Step1_a =  widgets.default.values$Step1_a,
+Step1_b =  widgets.default.values$Step1_b
 )
 
 
   # Initialization of the module
-    observeEvent(steps.enabled(), ignoreNULL = TRUE, {
-      if (is.null(steps.enabled()))
-        rv$steps.enabled <- setNames(rep(FALSE, rv.process$length), rv.process$config$steps)
-      else
-        rv$steps.enabled <- steps.enabled()
-    })
-
-
-    observeEvent(remoteReset(), {
-      lapply(names(rv.widgets), function(x){
-        rv.widgets[[x]] <- widgets.default.values[[x]]
-      })
-    })
-
+  
 ###### ------------------- Code for Description (step 0) -------------------------    #####
 output$Description <- renderUI({
   rv$steps.enabled
@@ -124,41 +91,126 @@ observeEvent(input$btn_validate_Description, ignoreInit = T, ignoreNULL=T, {
   rv$dataIn <- dataIn()
   dataOut$trigger <- Send_Result_to_Caller(rv$dataIn)$trigger
   dataOut$value <- Send_Result_to_Caller(rv$dataIn)$value
-  #rv$status['Description'] <- global$VALIDATED
-
 })
 
-# Code for step step1
-observeEvent(input$step1_a,{rv.widgets$step1_a <- input$step1_a})
 
-observeEvent(input$step1_b,{rv.widgets$step1_b <- input$step1_b})
+###### ------------------- Code for Step1 -------------------------    #####
 
-if (rv$steps.enabled['#step.name#'])
-                selectInput(ns('step1_a'), 'Select step1_a',
+observeEvent(input$Step1_a,{rv.widgets$Step1_a <- input$Step1_a})
+
+observeEvent(input$Step1_b,{rv.widgets$Step1_b <- input$Step1_b})
+
+output$Step1_a_UI <- renderUI({
+  rv.widgets$Step1_a
+  if (rv$steps.enabled['Step1'])
+    selectInput(ns('Step1_a'), 'Step1_a in renderUI',
+                choices = 1:4,
+                selected = rv.widgets$Step1_a,
+                width = '150px')
+  else
+    shinyjs::disabled(
+      selectInput(ns('Step1_a'), 'Step1_a in renderUI',
+                  choices = 1:4,
+                  selected = rv.widgets$Step1_a,
+                  width = '150px')
+      )
+})
+
+output$Step1 <- renderUI({
+  name <- 'Step1'
+  wellPanel(id = ns('foo'),
+    actionButton(ns('exampleBtn_Step1'), 'Example button for Step1'),
+    tagList(
+
+   uiOutput(ns('Step1_a_UI'))
+   ,
+div(
+if (rv$steps.enabled['Step1'])
+                selectInput(ns('Step1_b'), 'Select Step1_b',
                           choices = 1:3,
-                          selected = rv.widgets$step1_a,
+                          selected = rv.widgets$Step1_b,
                           width = '150px')
               else
                 shinyjs::disabled(
-                  selectInput(ns('step1_a'), 'Select step1_a',
+                  selectInput(ns('Step1_b'), 'Select Step1_b',
                               choices = 1:5,
-                              selected = rv.widgets$step1_a,
+                              selected = rv.widgets$Step1_b,
                               width = '150px')
                 )
-# Code for step step2
-observeEvent(input$step2_c,{rv.widgets$step2_c <- input$step2_c})
-
-observeEvent(input$step2_d,{rv.widgets$step2_d <- input$step2_d})
-
-if (rv$steps.enabled['#step.name#'])
-                selectInput(ns('step2_c'), 'Select step2_c',
-                          choices = 1:3,
-                          selected = rv.widgets$step2_c,
-                          width = '150px')
+)
+,
+div(
+if (rv$steps.enabled['Step1'])
+                actionButton(ns(paste0('btn_validate_', Step1)),
+                             'Perform Step1',
+                             class = btn_success_color)
               else
                 shinyjs::disabled(
-                  selectInput(ns('step2_c'), 'Select step2_c',
-                              choices = 1:5,
-                              selected = rv.widgets$step2_c,
-                              width = '150px')
-                )
+                  actionButton(ns(paste0('btn_validate_', Step1)),
+                               'Perform Step1',
+                               class = btn_success_color)
+                  )
+)
+
+    )
+  )
+})
+
+observeEvent(input$btn_validate_Step1, ignoreInit = T, {
+  # Add your stuff code here
+  dataOut$trigger <- Send_Result_to_Caller(rv$dataIn)$trigger
+  dataOut$value <- Send_Result_to_Caller(rv$dataIn)$value
+})
+
+###### ------------------- Code for Save -------------------------    #####
+
+output$Save <- renderUI({
+  name <- 'Save'
+  wellPanel(id = ns('foo'),
+    actionButton(ns('exampleBtn_Save'), 'Example button for Save'),
+    tagList(
+
+div(
+if (rv$steps.enabled['Save'])
+                actionButton(ns(paste0('btn_validate_', Save)),
+                             'Perform Save',
+                             class = btn_success_color)
+              else
+                shinyjs::disabled(
+                  actionButton(ns(paste0('btn_validate_', Save)),
+                               'Perform Save',
+                               class = btn_success_color)
+                  )
+)
+
+    )
+  )
+})
+
+#------------- Code for validation step ---------------
+
+observeEvent(input$btn_validate_Save, ignoreInit = T, {
+  # Add your stuff code here
+  rv$dataIn <- AddItemToDataset(rv$dataIn, config$name)
+  dataOut$trigger <- Send_Result_to_Caller(rv$dataIn)$trigger
+  dataOut$value <- Send_Result_to_Caller(rv$dataIn)$value
+})
+
+ # Return value of module
+# DO NOT MODIFY THIS PART
+list(config = reactive({
+                config$ll.UI <- setNames(lapply(config$steps,
+                                  function(x){
+                                    do.call('uiOutput', list(ns(x)))
+                                  }),
+                           paste0('screen_', config$steps)
+  )
+  config
+}),
+dataOut = reactive({dataOut})
+#status = reactive({rv$status})
+)
+
+})
+}
+

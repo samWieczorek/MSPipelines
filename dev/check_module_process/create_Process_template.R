@@ -14,9 +14,9 @@ source("./mod_AddStep.R")
 
 ui <- fluidPage(
   tagList(
-    textInput('pipeline_name','Pipeline name'),
-  textInput('process_name','process name'),
-  selectInput("members", "Number of steps", choices = 1:5, width='100px'),
+    textInput('pipeline_name','Pipeline name', value = 'pipe1'),
+  textInput('process_name','process name', value = 'proc1'),
+  selectInput("members", "Number of steps", choices = 2:10, width='100px'),
   uiOutput('show_step_forms'),
 
   actionButton('validate', 'Generate process skeleton')
@@ -36,7 +36,9 @@ server <- function(input, output, session){
     members <- as.integer(input$members) # default 2
     req(input$members > 0)
     rv$step_value <- lapply(1:as.numeric(input$members), function(i) {
-      mod_AddStep_server(paste0('step_', i))
+      mod_AddStep_server(paste0('step_', i),
+                         n = reactive({i}),
+                         nTotal = reactive({as.numeric(input$members)}))
     })
     lapply(1:members, function(i) {
       mod_AddStep_ui(paste0('step_', i))
@@ -59,8 +61,6 @@ server <- function(input, output, session){
     file <- paste0("./test/temp_mod_pipe_", process, ".R")
 
     cat(NULL, file=file)
-    append=TRUE
-
 
 
     #----------------------------------------------------------------#
@@ -83,96 +83,84 @@ server <- function(input, output, session){
 
 
     write_ui(name=process,
-             file=file,
-             append = append)
+             file=file)
 
     write_start_server(name=process,
-                       file=file,
-                       append = append)
+                       file=file)
 
     all.widgets.name <- unlist(lapply(1:length(rv$step_value), function(x){rv$step_value[[x]]$widgets.name()}))
     all.widgets.defaultVal <- unlist(lapply(1:length(rv$step_value), function(x){rv$step_value[[x]]$widgets.defaultVal()}))
     write_widgets_default_values(name = process,
                                  widgets.name = all.widgets.name,
                                  widgets.defaultVal = all.widgets.defaultVal,
-                                 file = file,
-                                 append = append)
+                                 file = file)
 
-    write_moduleServerFunc(file = file, append = append)
+    write_moduleServerFunc(file = file)
 
 
     write_config(name = process,
                  steps = steps,
                  mandatory = mandatory,
-                 file = file,
-                 append = append)
+                 file = file)
 
 
     write_rv_widgets_def(widgets.name = all.widgets.name,
-                         file = file,
-                         append = append)
+                         file = file)
 
 
-    write_initModule_func(file = file, append = append)
+    write_initModule_func(file = file)
 
 
-    write_output_description_template(file = file, append = append)
+    write_output_description_template(file = file)
 
-    for (i in 1:length(vec.steps)){
+    # Add code for each step except the first one
+    for (i in 2:length(vec.steps)){
       step.widgets.name <- unlist(rv$step_value[[i]]$widgets.name())
       step.widgets.defaultVal <- unlist(rv$step_value[[i]]$widgets.defaultVal())
       step.widgets.renderUI <- unlist(rv$step_value[[i]]$widgets.renderUI())
       step.widgets.type <- unlist(rv$step_value[[i]]$widgets.type())
-      browser()
 
-      write_header(step.name = vec.steps[i], file = file, append = append)
-      write_observer_for_widgets(step.widgets.name, file, append)
+      write_header_comment(step.name = vec.steps[i], file = file)
+     #browser()
+     write_observer_for_widgets(step.widgets.name, file)
 
-      ind.renderUI.widgets <- which(isTRUE(step.widgets.renderUI))
-      if (length(ind.renderUI.widgets) > 0)
+      ind.renderUI.widgets <- which(step.widgets.renderUI == TRUE)
+      if (length(ind.renderUI.widgets) > 0){
         write_code_for_renderUI_widgets(widgets.renderUI.names = step.widgets.name[ind.renderUI.widgets],
                                         step.name = vec.steps[i],
-                                        file = file,
-                                        append)
-
-      write_header_for_global_step_renderUI(step.name = vec.steps[i],
-                                            file = file,
-                                            append)
-
-      if (length(ind.renderUI.widgets) > 0)
-        write_code_for_call_renderUI_widgets(widgets.renderUI.names = step.widgets.name[ind.renderUI.widgets],
-                                             file = file,
-                                             append)
-
-      ind.direct.widgets <- which(!isTRUE(step.widgets.renderUI))
-      if (length(ind.direct.widgets) > 0){
-        if (length(ind.renderUI.widgets) > 0)
-          write_additional_comma(file, append)
-        write_code_for_call_direct_widgets(widgets.direct.names = step.widgets.name[ind.direct.widgets],
-                                           step.name =  vec.steps[i],
-                                           file = file,
-                                             append)
-
-        write_code_for_validation_btn(step.name = vec.steps[i],
-                                      file = file,
-                                      append)
-        write_code_to_end_global_step_renderUI(file = file,
-                                               append)
+                                        file = file)
 
       }
+
+      write_header_for_global_step_renderUI(step.name = vec.steps[i], file = file)
+
+      if (length(ind.renderUI.widgets) > 0){
+        write_code_for_call_renderUI_widgets(widgets.renderUI.names = step.widgets.name[ind.renderUI.widgets],
+                                             file = file)
+      write_additional_comma(file)
+      }
+
+      ind.direct.widgets <- which(step.widgets.renderUI == FALSE)
+      if (length(ind.direct.widgets) > 0){
+        write_code_for_call_direct_widgets(widgets.direct.names = step.widgets.name[ind.direct.widgets],
+                                           step.name =  vec.steps[i],
+                                           file = file)
+        write_additional_comma(file)
+      }
+
+      write_code_for_validation_btn(step.name = vec.steps[i], file = file)
+      write_code_to_end_global_step_renderUI(file = file)
+
+      if (i == length(vec.steps))
+        write_code_for_observe_validation_btn_last_step(step.name = vec.steps[i], file = file)
+      else
+        write_code_for_observe_validation_btn_generic_step(step.name = vec.steps[i], file = file)
+
+
+
     }
-
-   # create_rNav(process=process, steps = steps, file=file, append = append)
-
-   # create_rvModule(process=process, widgets_list=widgets_list, file=file, append = append)
-
-   # create_reset(widgets_list=widgets_list,nb_screen=length(unlist(strsplit(steps,","))),file=file, append = append)
-
-    #create_screen(process=process,file=file, append = append)
-
-   # create_widgets_from_input(widgets_list=widgets_list,file=file, append = append)
-
-   # create_end_server(name=name,file=file, append = append)
+    write_code_for_return_server(file = file)
+    write_code_for_end_module(file = file)
 
   }
 
